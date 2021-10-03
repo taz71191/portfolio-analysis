@@ -1,0 +1,36 @@
+runtime: custom
+env: flex
+service: default
+threadsafe: yes
+entrypoint: gunicorn -b :$PORT main:app
+network:
+  forwarded_ports:
+    - 80:8080
+
+automatic_scaling:
+  min_num_instances: 1
+  max_num_instances: 2
+  cool_down_period_sec: 120 # default value
+  cpu_utilization:
+resources:
+  cpu: 1
+  memory_gb: 5
+  disk_size_gb: 500
+
+liveness_check:
+  path: "/liveness_check"
+  check_interval_sec: 300
+  timeout_sec: 300
+  failure_threshold: 2
+  success_threshold: 2
+readiness_check:
+  path: "/readiness_check"
+  check_interval_sec: 300
+  timeout_sec: 300
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300
+# volumes:
+# - name: ramdisk1
+#   volume_type: tmpfs
+#   size_gb: 0.5

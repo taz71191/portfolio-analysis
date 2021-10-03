@@ -11,13 +11,18 @@ jupyterlab = "*"
 numpy = "*"
 yahoofinancials = "*"
 matplotlib = "*"
+numpy-financial = "*"
+streamlit = "*"
+watchdog = "*"
+plotly = "*"
+gunicorn = "*"
 
 [dev-packages]
 pytest = "*"
-
+portfolio-analysis = {editable = true, path = "."}
 
 [requires]
-python_version = "3.9"
+python_version = "3.8"
 
 [scripts]
 jupyter="jupyter lab"

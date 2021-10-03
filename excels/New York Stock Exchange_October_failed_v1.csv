@@ -1,0 +1,158 @@
+symbol,name,price,exchange,exchangeShortName,type
+ROBO,Robo Global Robotics and Automation Index ETF,68.22,New York Stock Exchange,NYSE,etf
+TDS,"Telephone and Data Systems, Inc.",19.2,New York Stock Exchange,NYSE,stock
+AAC,Ares Acquisition Corporation,9.75,New York Stock Exchange,NYSE,stock
+PPR,Voya Prime Rate Trust,4.67,New York Stock Exchange,NYSE,fund
+PFFD,Global X U.S. Preferred ETF,25.88,New York Stock Exchange,NYSE,etf
+BNY,BlackRock New York Municipal Income Trust,15.56,New York Stock Exchange,NYSE,fund
+JPT,Nuveen Preferred and Income 2022 Term Fund,25.0,New York Stock Exchange,NYSE,fund
+TBB,AT&amp;T Inc. 5.35% GLB NTS 66,26.2,New York Stock Exchange,NYSE,stock
+TDA,Telephone &amp; Data Systems Inc.,25.2,New York Stock Exchange,NYSE,stock
+PYT,PPLUS Trust Series GSC-2 GSC 2 CT FL RT,24.38,New York Stock Exchange,NYSE,stock
+AEB,Aegon N.V. PERP CAP FLTG RT,25.01,New York Stock Exchange,NYSE,stock
+DIVO,Amplify ETF Trust - Amplify CWP Enhanced Dividend Income ETF,35.8,New York Stock Exchange,NYSE,etf
+DTEC,ALPS Disruptive Technologies ETF,50.71,New York Stock Exchange,NYSE,etf
+ECCY,Eagle Point Credit Company Inc. 6.75% NT DE 2027,25.25,New York Stock Exchange,NYSE,fund
+ELC,"Entergy Louisiana, LLC COLLATERAL TR MT",25.27,New York Stock Exchange,NYSE,stock
+GJH,"STRATS Trust for United States Cellular Corp. Securities, Series 2004-6 STRATS 6.375",10.85,New York Stock Exchange,NYSE,stock
+GJO,Strats Trust Wal Mart Stores Inc. STRT CTF 05-4,23.7,New York Stock Exchange,NYSE,stock
+GJP,"STRATS Trust For Dominion Resources Inc. Securities, Series 2005-6",24.56,New York Stock Exchange,NYSE,stock
+GJR,Strats Trust For Procter &amp; Gambel Security CTF 2006-1,23.5,New York Stock Exchange,NYSE,stock
+GJS,"STRATS Trust for Goldman Sachs Group Securities, Series 2006-2",21.03,New York Stock Exchange,NYSE,stock
+GJT,"Strats(SM) Trust For Allstate Corp Securities, Series 2006-3 06-3 ASSET BKD",20.65,New York Stock Exchange,NYSE,stock
+INDF,Exchange Traded Concepts Trust - Nifty India Financials ETF,37.9,New York Stock Exchange,NYSE,etf
+JBK,"Corporate Backed Trust Certificates, Goldman Sachs Capital I Securities-Backed Series 2004-6 04-6 A1 3.50",33.45,New York Stock Exchange,NYSE,stock
+KTH,Corts Trust For Peco Energy Capital Trust III,33.6,New York Stock Exchange,NYSE,stock
+KTN,Credit-Enhanced Corts Trust Aon,33.28,New York Stock Exchange,NYSE,stock
+PYS,PPlus Trust Series RRD-1 RRD-1 CTF CL A,23.35,New York Stock Exchange,NYSE,stock
+TDI,"Telephone and Data Systems, Inc. SR NT 2045",25.36,New York Stock Exchange,NYSE,stock
+RSF,RiverNorth Specialty Finance Corporation,19.34,New York Stock Exchange,NYSE,fund
+SFTW,Osprey Technology Acquisition Corp.,11.41,New York Stock Exchange,NYSE,stock
+HCXY,"Hercules Capital, Inc.",26.97,New York Stock Exchange,NYSE,stock
+NTEST,Tick Pilot Test Sym-Control,25.04,New York Stock Exchange,NYSE,stock
+PRS,"Prudential Financial, Inc. 5.62",27.12,New York Stock Exchange,NYSE,stock
+SREA,SEMPRA ENERGY,27.62,New York Stock Exchange,NYSE,stock
+SAF,Saratoga Investment Corp 6.25% ,25.01,New York Stock Exchange,NYSE,stock
+AFGC,"American Financial Group, Inc.",27.14,New York Stock Exchange,NYSE,stock
+AEFC,Aegon Funding Company LLC,26.77,New York Stock Exchange,NYSE,fund
+AQNB,Algonquin Power & Utilities Cor,27.8,New York Stock Exchange,NYSE,stock
+AQNA,Algonquin Power & Utilities Cor,27.98,New York Stock Exchange,NYSE,stock
+ECCX,Eagle Point Credit Company Inc. 6.6875% NT 28,25.4,New York Stock Exchange,NYSE,fund
+TBC,AT&T Inc. 5.625% Global Notes d,27.06,New York Stock Exchange,NYSE,stock
+RCA,Ready Capital Corporation 7.00%,26.64,New York Stock Exchange,NYSE,stock
+GSLD,"Global Ship Lease, Inc. 8.00% S",26.11,New York Stock Exchange,NYSE,stock
+SJIJ,"South Jersey Industries, Inc",26.72,New York Stock Exchange,NYSE,stock
+DFNS,LGL Systems Acquisition Corp.,12.85,New York Stock Exchange,NYSE,stock
+RESP,WisdomTree U.S. ESG Fund,48.25,New York Stock Exchange,NYSE,etf
+GFLU,GFL Environmental Inc.,87.05,New York Stock Exchange,NYSE,stock
+RFM,"RiverNorth Flexible Municipal Income Fund, Inc.",23.97,New York Stock Exchange,NYSE,fund
+CBO,CBO (Listing Market - NYSE - Ne,25.01,New York Stock Exchange,NYSE,stock
+IVES,Wedbush ETFMG Global Cloud Technology ETF,54.5,New York Stock Exchange,NYSE,etf
+BKMC,BNY Mellon US Mid Cap Core Equity ETF,91.48,New York Stock Exchange,NYSE,etf
+BKSE,BNY Mellon US Small Cap Core Equity ETF,95.89,New York Stock Exchange,NYSE,etf
+KOKU,Xtrackers MSCI Kokusai Equity ETF,83.1,New York Stock Exchange,NYSE,etf
+BKLC,BNY Mellon US Large Cap Core Equity ETF,84.48,New York Stock Exchange,NYSE,etf
+BBMC,JPMorgan BetaBuilders U.S. Mid Cap Equity ETF,90.65,New York Stock Exchange,NYSE,etf
+BKSB,BNY Mellon Short Duration Corporate Bond ETF,51.29,New York Stock Exchange,NYSE,etf
+BKAG,BNY Mellon Core Bond ETF,49.61,New York Stock Exchange,NYSE,etf
+BKEM,BNY Mellon Emerging Markets Equity ETF,70.18,New York Stock Exchange,NYSE,etf
+DEED,First Trust TCW Securitized Plus ETF,25.92,New York Stock Exchange,NYSE,etf
+GLCN,VanEck Vectors China Growth Leaders ETF,39.67,New York Stock Exchange,NYSE,etf
+GLIN,VanEck Vectors India Growth Leaders ETF,43.57,New York Stock Exchange,NYSE,etf
+ARB,AltShares Merger Arbitrage ETF,25.83,New York Stock Exchange,NYSE,etf
+TAAG,Trend Aggregation Growth ETF,26.15,New York Stock Exchange,NYSE,etf
+TADS,The Active Dividend Stock ETF,28.6,New York Stock Exchange,NYSE,etf
+JEPI,J.P. Morgan Exchange-Traded Fund Trust - JPMorgan Equity Premium Income ETF,61.17,New York Stock Exchange,NYSE,etf
+JIG,J.P. Morgan Exchange-Traded Fund Trust - JPMorgan International Growth ETF,79.45,New York Stock Exchange,NYSE,etf
+MTCN,ArcelorMittal 5.50% Mandatorily,71.89,New York Stock Exchange,NYSE,stock
+SGOV,iShares Trust - iShares 0-3 Month Treasury Bond ETF,100.03,New York Stock Exchange,NYSE,etf
+SSLY,Syntax Stratified SmallCap ETF,52.59,New York Stock Exchange,NYSE,etf
+CEFD,ETRACS Monthly Pay 1.5X Leveraged Closed-End Fund Index ETN,32.36,New York Stock Exchange,NYSE,etf
+MLPR,ETRACS Quarterly Pay 1.5X Leveraged Alerian MLP Index ETN,31.9,New York Stock Exchange,NYSE,etf
+MVRL,ETRACS Monthly Pay 1.5X Leveraged Mortgage REIT ETN,46.97,New York Stock Exchange,NYSE,etf
+SBBA,Scorpio Tankers Inc. 7.00% Seni,24.84,New York Stock Exchange,NYSE,stock
+EMBD,Global X Emerging Markets Bond ETF,26.59,New York Stock Exchange,NYSE,etf
+HIPR,Direxion High Growth ETF,71.25,New York Stock Exchange,NYSE,etf
+DYHG,Direxion Dynamic Hedge ETF,58.11,New York Stock Exchange,NYSE,etf
+NIFE,Direxion Fallen Knives ETF,72.54,New York Stock Exchange,NYSE,etf
+VTOL,Bristow Group Inc.,30.97,New York Stock Exchange,NYSE,stock
+DEEP,Roundhill Acquirers Deep Value ETF,34.85,New York Stock Exchange,NYSE,etf
+PAMC,Pacer Lunt MidCap Multi-Factor Alternator ETF,36.01,New York Stock Exchange,NYSE,etf
+WFH,Direxion Work From Home ETF,77.72,New York Stock Exchange,NYSE,etf
+IBDV,iShares Trust - iShares iBonds Dec 2030 Term Corporate ETF,25.49,New York Stock Exchange,NYSE,etf
+PALC,Pacer Lunt Large Cap Multi-Factor Alternator ETF,39.65,New York Stock Exchange,NYSE,etf
+EUSB,iShares Trust - iShares ESG Advanced Total USD Bond Market ETF,49.8,New York Stock Exchange,NYSE,etf
+PFFV,Global X Variable Rate Preferred ETF ,28.08,New York Stock Exchange,NYSE,etf
+SOAC,Sustainable Opportunities Acquisition Corp.,10.62,New York Stock Exchange,NYSE,stock
+ALTL,Pacer Lunt Large Cap Alternator ETF,42.24,New York Stock Exchange,NYSE,etf
+DYFN,Angel Oak Dynamic Financial Strategies Income Term Trust,20.65,New York Stock Exchange,NYSE,stock
+FTHY,First Trust High Yield Opportunities 2027 Term Fund,20.63,New York Stock Exchange,NYSE,fund
+AZAL,AllianzIM U.S. Large Cap Buffer10 Jul ETF,28.35,New York Stock Exchange,NYSE,etf
+IBTK,iShares iBonds Dec 2030 Term Treasury ETF,23.81,New York Stock Exchange,NYSE,etf
+GBGR,Global Beta Rising Stars ETF,23.69,New York Stock Exchange,NYSE,etf
+GBLO,Global Beta Low Beta ETF,23.99,New York Stock Exchange,NYSE,etf
+NWG,NatWest Group plc,5.98,New York Stock Exchange,NYSE,stock
+ASGI,Aberdeen Standard Global Infrastructure Income Fund,20.02,New York Stock Exchange,NYSE,fund
+CLII,Climate Change Crisis Real Impact I Acquisition Corporation,14.36,New York Stock Exchange,NYSE,stock
+CPSR,Capstar Special Purpose Acquisition Corp.,9.95,New York Stock Exchange,NYSE,stock
+DGNR,Dragoneer Growth Opportunities Corp.,9.26,New York Stock Exchange,NYSE,stock
+EQD,Equity Distribution Acquisition Corp.,9.83,New York Stock Exchange,NYSE,stock
+FGNA,FG New America Acquisition Corp.,9.97,New York Stock Exchange,NYSE,stock
+NUVB,Nuvation Bio Inc.,9.34,New York Stock Exchange,NYSE,stock
+SNPR,Tortoise Acquisition Corp. II,9.3,New York Stock Exchange,NYSE,stock
+AJAX,Ajax I,8.72,New York Stock Exchange,NYSE,stock
+EMPW,Empower Ltd.,9.8,New York Stock Exchange,NYSE,stock
+SDHY,PGIM Short Duration High Yield Opportunities Fund,18.66,New York Stock Exchange,NYSE,fund
+SPNV,"Supernova Partners Acquisition Company, Inc.",8.8,New York Stock Exchange,NYSE,stock
+TPGY,TPG Pace Beneficial Finance Corp.,10.67,New York Stock Exchange,NYSE,stock
+HPX,HPX Corp.,9.85,New York Stock Exchange,NYSE,stock
+KWAC-UN,Kingswood Acquisition Corp.,10.38,New York Stock Exchange,NYSE,stock
+PIPP-UN,Pine Island Acquisition Corp.,10.03,New York Stock Exchange,NYSE,stock
+TPGY-UN,TPG Pace Beneficial Finance Corp.,10.93,New York Stock Exchange,NYSE,stock
+XPOA-UN,"DPCM Capital, Inc.",10.0,New York Stock Exchange,NYSE,stock
+ASZ-UN,Austerlitz Acquisition Corporation II,9.99,New York Stock Exchange,NYSE,stock
+AUS-UN,Austerlitz Acquisition Corporation I,10.36,New York Stock Exchange,NYSE,stock
+BUZZ,VanEck Vectors ETF Trust - VanEck Vectors Social Sentiment ETF,25.9,New York Stock Exchange,NYSE,etf
+FHS,"First High-School Education Group Co., Ltd.",3.91,New York Stock Exchange,NYSE,stock
+ESM-UN,ESM Acquisition Corporation,9.93,New York Stock Exchange,NYSE,stock
+NGC-UN,Northern Genesis Acquisition Corp. III,10.06,New York Stock Exchange,NYSE,stock
+PANA,Panacea Acquisition Corp. II,9.78,New York Stock Exchange,NYSE,stock
+IACA,ION Acquisition Corp 1 Ltd.,10.54,New York Stock Exchange,NYSE,stock
+LEV,The Lion Electric Company,13.1,New York Stock Exchange,NYSE,stock
+ZIP,"ZipRecruiter, Inc.",28.47,New York Stock Exchange,NYSE,stock
+ZME,Zhangmen Education Inc.,2.86,New York Stock Exchange,NYSE,stock
+YMM,Full Truck Alliance Co. Ltd.,16.14,New York Stock Exchange,NYSE,stock
+DDL,Dingdong (Cayman) Limited,23.15,New York Stock Exchange,NYSE,stock
+IS,ironSource Ltd.,12.16,New York Stock Exchange,NYSE,stock
+FOA,Finance Of America Companies Inc.,4.97,New York Stock Exchange,NYSE,stock
+ONON,On Holding AG,36.02,New York Stock Exchange,NYSE,stock
+ZETA,Zeta Global Holdings Corp.,6.0,New York Stock Exchange,NYSE,stock
+WEBR,Weber Inc.,15.41,New York Stock Exchange,NYSE,stock
+WDI,Western Asset Diversified Income Fund,19.52,New York Stock Exchange,NYSE,fund
+UGIC,UGI Corporation,100.45,New York Stock Exchange,NYSE,stock
+SUNL,Sunlight Financial Holdings Inc.,5.47,New York Stock Exchange,NYSE,stock
+SPIR,"Spire Global, Inc.",13.85,New York Stock Exchange,NYSE,stock
+RTPZ,Reinvent Technology Partners Z,9.79,New York Stock Exchange,NYSE,stock
+PV,Primavera Capital Acquisition Corporation,9.75,New York Stock Exchange,NYSE,stock
+PDO,Pimco Dynamic Income Opportunities Fund,20.88,New York Stock Exchange,NYSE,fund
+OWLT,"Owlet, Inc.",5.53,New York Stock Exchange,NYSE,stock
+NMG,Nouveau Monde Graphite Inc.,5.79,New York Stock Exchange,NYSE,stock
+NDMO,Nuveen Dynamic Municipal Opportunities Fund,16.18,New York Stock Exchange,NYSE,fund
+MKFG,Markforged Holding Corporation,7.48,New York Stock Exchange,NYSE,stock
+KAHC,KKR Acquisition Holdings I Corp.,9.78,New York Stock Exchange,NYSE,stock
+JWSM,Jaws Mustang Acquisition Corporation,9.76,New York Stock Exchange,NYSE,stock
+JPM-PK,JPMorgan Chase & Co.,26.37,New York Stock Exchange,NYSE,stock
+JBI,"Janus International Group, Inc.",12.77,New York Stock Exchange,NYSE,stock
+GENI,Genius Sports Limited,19.22,New York Stock Exchange,NYSE,stock
+GB,Global Blue Group Holding AG,6.35,New York Stock Exchange,NYSE,stock
+FREY,FREYR Battery,9.73,New York Stock Exchange,NYSE,stock
+FERG,Ferguson plc,145.73,New York Stock Exchange,NYSE,stock
+CVII,Churchill Capital Corp VII,9.72,New York Stock Exchange,NYSE,stock
+CSAN,Cosan S.A.,17.75,New York Stock Exchange,NYSE,stock
+CPUH,Compute Health Acquisition Corp.,9.73,New York Stock Exchange,NYSE,stock
+CGAU,Centerra Gold Inc.,6.91,New York Stock Exchange,NYSE,stock
+BRW, Saba Capital Income & Opportunities Fund,4.56,New York Stock Exchange,NYSE,fund
+BAMR,Brookfield Asset Management Reinsurance Partners Ltd.,57.73,New York Stock Exchange,NYSE,stock
+TOST,"Toast, Inc.",55.78,New York Stock Exchange,NYSE,stock
+ESMT,"EngageSmart, LLC",0.0,New York Stock Exchange,NYSE,stock
+NRDY,"Nerdy, Inc.",11.6,New York Stock Exchange,NYSE,stock
