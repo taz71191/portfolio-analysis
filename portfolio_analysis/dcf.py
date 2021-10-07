@@ -4,7 +4,7 @@ from decimal import Decimal
 import numpy as np
 import numpy_financial as npf
 import pandas as pd
-
+from sklearn.linear_model import LinearRegression
 from portfolio_analysis.data import *
 
 
@@ -255,23 +255,22 @@ def remove_outliers(df, metric):
     df.loc[outliers, f"{metric}_roc"] = median
     return df
 
-def project_eps(df, metric):
-    df["year"] = df["date"].apply(lambda x: x[:4])
-    #     Find rate of change of eps yoy
-    df = df.sort_values(by="year")
-    df[f"{metric}_roc"] = df[f"{metric}"].pct_change()
+def regression_analyze(df, years=10):
     
-    eps_roc_flag = 'Positive' 
-    for i in range(3):
-        if df[f"{metric}_roc"].iloc[-i-1] < 0:
-            eps_roc_flag = 'Negative'
-            break
-    df[f"{metric}_roc_rolling"] = df[f"{metric}_roc"].rolling(3).median()
-    #     3 year mean of dilued earnings per share as startpoint
-    # remove outliers from metric roc
+    df.loc[:, "ln_eps"] = np.log(df['eps'])
+    if len(df) > years:
+        df = df.iloc[-years:,:]
+    df.loc[:,'t1'] = [x for x in range(1, len(df)+1)]
+    reg = LinearRegression()
+    try:
+        reg.fit(np.array(df['t1']).reshape(-1, 1), df['ln_eps'].array)
+        return {"model": "log-linear", "percent_change": reg.coef_[0]}
+    except ValueError as e:
+        reg.fit(np.array(df['t1']).reshape(-1, 1), df['eps'].array)
+        return {"model": "linear", "percent_change": reg.coef_[0]/df['eps'].mean()}
 
-
-    eps_base = df[f"{metric}"].iloc[-3:].median()
+def median_method(df, metric):
+    df.loc[:, f"{metric}_roc_rolling"] = df[f"{metric}_roc"].rolling(3).median()
     eps_roc = df[f"{metric}_roc"].iloc[-3:].median()
     eps_roc_rolling = df[f"{metric}_roc_rolling"].iloc[-3:].median()
     if eps_roc > eps_roc_rolling:
@@ -281,8 +280,9 @@ def project_eps(df, metric):
     # in the spirit of taking the more conservative value use the lesser number
     if eps_roc < 0.01:
         eps_roc = 0.01
-    new_df = pd.DataFrame()
-    new_df["year"] = [i for i in range(int(df.loc[0, 'year']) +1, int(df.loc[0, 'year']) +11)]
+    return eps_roc
+
+def predict_future_sales(new_df, eps_base, eps_roc, method):
     future_eps = []
     #     DO this for a optimistic and pessimistic scenario
     for i in range(len(new_df["year"])):
@@ -290,23 +290,62 @@ def project_eps(df, metric):
             future_eps.append(eps_base * (1 + eps_roc))
         else:
             future_eps.append(future_eps[i - 1] * (1 + eps_roc))
-    new_df[f"{metric}"] = future_eps
-    return new_df, eps_roc, eps_base, eps_roc_flag, df["eps"].iloc[-3:].to_list()
+
+    new_df[f"eps_{method}"] = future_eps
+    return new_df
+
+def project_eps(df, metric):
+    df.loc[:, "year"] = df["date"].apply(lambda x: x[:4])
+    #     Find rate of change of eps yoy
+    df = df.sort_values(by="year")
+    # Arithemitic Mean
+    df[f"{metric}_roc"] = df[f"{metric}"].pct_change()
+
+    # Geometric mean growth rate n=-3
+    geometric_mean = ((df[f"{metric}_roc"].iloc[-1] / df[f"{metric}_roc"].iloc[-5])**(1/4)) -1
+
+    # Regression
+    # # https://pages.stern.nyu.edu/~adamodar/pdfiles/valn2ed/ch11.pdf
+    regression_results = regression_analyze(df)  
+    
+    eps_roc_flag = 'Positive' 
+    for i in range(3):
+        if df[f"{metric}_roc"].iloc[-i-1] < 0:
+            eps_roc_flag = 'Negative'
+            break
+    
+    #     3 year mean of dilued earnings per share as startpoint
+    # remove outliers from metric roc
+
+    eps_roc = median_method(df, metric)
+    eps_base = df[f"{metric}"].iloc[-1]
+    
+    new_df = pd.DataFrame()
+    new_df.loc[:, "year"] = [i for i in range(int(df.loc[0, 'year']) +1, int(df.loc[0, 'year']) +11)]
+    
+    methods = {f"{regression_results['model']}": regression_results["percent_change"], "mean": eps_roc}
+
+    for method in methods.keys():
+        new_df = predict_future_sales(new_df, eps_base, methods[f"{method}"], method)
+    
+    return new_df, eps_roc, eps_base, eps_roc_flag, df["eps"].iloc[-3:].to_list(), regression_results
 
 
 def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_rate=0.09):
     symbol = company.loc["symbol"]
     try:
-        new_df, eps_roc, eps_base, eps_roc_flag, eps_list = project_eps(IS, cash_flow_metric) #eps_roc_flag indicates if any of the years had a negative earning per share rate of change
-        eps = new_df[cash_flow_metric].to_list()
+        new_df, eps_roc, eps_base, eps_roc_flag, eps_list, regression_results = project_eps(IS, cash_flow_metric) #eps_roc_flag indicates if any of the years had a negative earning per share rate of change
+        eps = new_df[f"{cash_flow_metric}_{regression_results['model']}"].to_list()
         price = profile.loc[0, "price"]
         eps.insert(0, -price)
         irr = npf.irr(eps)
         
         # npv = cash flow / (1 + i)t - intial_investment
-        new_df['t'] = pd.Series(range(1, len(new_df)+1))
-        new_df['npv'] = new_df[cash_flow_metric] / np.power((1+discount_rate), new_df['t'])
-        npv = new_df['npv'].sum()
+        new_df.loc[:,'t'] = pd.Series(range(1, len(new_df)+1))
+        new_df.loc[:, 'npv_mean'] = new_df[f"{cash_flow_metric}_mean"] / np.power((1+discount_rate), new_df['t'])
+        new_df.loc[:, f'npv_{regression_results["model"]}'] = new_df[f"{cash_flow_metric}_{regression_results['model']}"] / np.power((1+discount_rate), new_df['t'])
+        npv_mean = new_df['npv_mean'].sum()
+        npv_regression = new_df[f'npv_{regression_results["model"]}'].sum()
         # ROE is net income divided by average shareholders' equity 
         ROE = CFR.loc[0, "returnOnEquityTTM"]
         # EPS is the net income divided by the weighted average number of common shares issued
@@ -329,10 +368,15 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
                 "symbol": company.loc["symbol"],
                 "name": company.loc["name"],
                 "price": company.loc["price"],
+                "income_statement_date": IS["date"].iloc[0],
                 "irr": irr,
-                "npv": npv,
+                "npv_mean": npv_mean,
+                "npv_regression": npv_regression,
+                "regression_type": regression_results["model"],
                 "eps_roc": eps_roc,
-                "eps_diluted": ROE,
+                "eps_roc_regression": regression_results["percent_change"],
+                "ROE": ROE,
+                "eps_diluted": EPS,
                 "MOP": MOP,
                 "QA": QA,
                 "MCap": MCap,
@@ -364,17 +408,20 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
                     "symbol": symbol,
                     "name": company.loc["name"],
                     "price": company.loc["price"],
+                    "income_statement_date": IS["date"].iloc[-1],
                     "irr": np.nan,
-                    "npv": np.nan,
+                    "npv_mean": np.nan,
+                    "npv_regression": np.nan,
+                    "regression_type": np.nan,
                     "eps_roc": np.nan,
-                    "ROE": ROE,
+                    "eps_roc_regression": np.nan,
                     "eps_diluted": EPS,
                     "MOP": MOP,
                     "QA": QA,
                     "MCap": MCap,
                     "PE": PE,
                     "eps_roc_flag": np.nan,
-                    "eps_base": eps_base,
+                    "eps_base": np.nan,
                     "eps_list": np.nan,
                     "error_message": e,
                 })

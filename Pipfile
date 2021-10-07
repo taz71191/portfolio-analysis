@@ -16,6 +16,7 @@ streamlit = "*"
 watchdog = "*"
 plotly = "*"
 gunicorn = "*"
+sklearn = "*"
 
 [dev-packages]
 pytest = "*"

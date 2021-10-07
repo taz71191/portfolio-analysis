@@ -54,8 +54,9 @@ def run_analysis(company_names, exchange, apikey):
             company_data = get_single_company_data(symbol, apikey)
             try:
                 irr = get_irr(company, company_data["IS"], company_data["Profile"], company_data["BS"], company_data["MC"], company_data["CFR"])
-            except KeyError:
+            except KeyError as e:
                 failed_companies = failed_companies.append(company, ignore_index=True)
+                print(e)
                 continue
             irr_df = irr_df.append(irr, ignore_index=True)
         failed_companies.to_csv(f"./excels/{exchange}_{month}_failed.csv", index=False,)
@@ -91,7 +92,7 @@ def analysis_single_company_data(company_data):
 
 def run_dashboard():
     st.title("RoboStock 0.0.01")
-    option = st.sidebar.selectbox("Select dashboard", ['Stock Screener', 'Stock DeepDive'])
+    option = st.sidebar.selectbox("Select dashboard", ['Stock DeepDive', 'Stock Screener'])
     st.header(option)
 
     if option == 'Stock Screener':
