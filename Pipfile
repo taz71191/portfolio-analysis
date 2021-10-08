@@ -17,6 +17,8 @@ watchdog = "*"
 plotly = "*"
 gunicorn = "*"
 sklearn = "*"
+google-cloud-datastore = "*"
+google-cloud-storage = "*"
 
 [dev-packages]
 pytest = "*"

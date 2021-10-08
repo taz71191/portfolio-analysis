@@ -21,8 +21,15 @@ from portfolio_analysis.data import (
     get_stock_peers
 )
 from portfolio_analysis.dcf import get_irr
+from google.cloud import storage
+from google.oauth2 import service_account
+import io
 
-
+bucket_name = 'robostock'
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+storage_client = storage.Client(credentials=credentials)
 
 
 def get_single_company_data(symbol, apikey):
@@ -43,7 +50,11 @@ def get_single_company_data(symbol, apikey):
 def run_analysis(company_names, exchange, apikey):
     month = pd.Timestamp.now().month_name()
     try:
-        irr_df = pd.read_csv(f"./excels/{exchange}_{month}.csv")
+        source_blob_name = f'{exchange}_{month}.csv'
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(source_blob_name)
+        data = blob.download_as_string()
+        irr_df = pd.read_csv(io.BytesIO(data))
     except FileNotFoundError:
         failed_companies = pd.DataFrame()
         irr_df = pd.DataFrame()
@@ -92,7 +103,7 @@ def analysis_single_company_data(company_data):
 
 def run_dashboard():
     st.title("RoboStock 0.0.01")
-    option = st.sidebar.selectbox("Select dashboard", ['Stock DeepDive', 'Stock Screener'])
+    option = st.sidebar.selectbox("Select dashboard", ['Stock Screener','Stock DeepDive'])
     st.header(option)
 
     if option == 'Stock Screener':
@@ -108,6 +119,10 @@ def run_dashboard():
 
         try:
             irr_df = run_analysis(company_names, selected_exchange, apikey)
+        except Exception as e:
+            e
+            return 
+        try:
             irr_df["irr"] = irr_df["irr"].fillna(-100)
             irr_df["eps_roc"] = irr_df["eps_roc"].fillna(-100)
             irr_filter = st.sidebar.slider("Filter for Internal Rate of Return", value=[4, int(irr_df.irr.max())])
