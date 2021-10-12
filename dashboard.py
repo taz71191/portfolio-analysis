@@ -150,11 +150,13 @@ def run_dashboard():
             exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
             filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9))]
             if exchange_filter == "None":
-                filtered_df
+                if len(filtered_df) > 100:
+                    filtered_df.head(100)
             else:
                 
                 filtered_df = filtered_df[filtered_df.exchange == exchange_filter]
-                filtered_df
+                if len(filtered_df) > 100:
+                    filtered_df.head(100)
 
             selected_company = st.sidebar.selectbox("Pick a company to analyse", company_names[company_names.symbol.isin(filtered_df['symbol'].to_list())].sort_values(by='name')['name'])
             drop_down = company_names[company_names.name == selected_company].iloc[0]['symbol']
