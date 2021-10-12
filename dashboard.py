@@ -25,11 +25,6 @@ from google.cloud import storage
 from google.oauth2 import service_account
 import io
 
-bucket_name = 'robostock'
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
-storage_client = storage.Client(credentials=credentials)
 
 
 def get_single_company_data(symbol, apikey):
@@ -78,6 +73,12 @@ def run_analysis(company_names, exchange, apikey):
     return irr_df
 
 def get_data_from_cloud(filename):
+    bucket_name = 'robostock'
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    storage_client = storage.Client(credentials=credentials)
+
     source_blob_name = filename
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)
@@ -130,12 +131,10 @@ def run_dashboard():
         company_names = get_all_company_tickers(apikey)
         # Pick an exchange to run analysus on
         # exchanges = company_names.exchange.unique()
-        
         try:
             irr_df = get_data_from_cloud(filename='AllCompanies_October.csv')
         except Exception as e:
             st.write(e)
-            return
         try:
             irr_df = irr_df.sort_values("ROC", ascending=False)
             irr_df['ROC_rank'] = [x for x in range(1, len(irr_df)+1)]
@@ -145,14 +144,14 @@ def run_dashboard():
             irr_df = irr_df.sort_values("Total_rank")
             mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0, max_value=100)
             st.sidebar.write("irr filter", mcap_filter)
-            exchanges = company_names[company_names.exchanges.isin(company_names['exchange'].to_list())].sort_values(by='exchange')['exchange']
+            exchanges = company_names[company_names.exchange.isin(company_names['exchange'].to_list())].sort_values(by='exchange')['exchange'].to_list()
             exchanges.insert(0,"None")
             exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
-            filtered_df = irr_df[(irr_df.MCap >= mcap_filter.value*(10**9))]
-            if exchange_filter.value == "None":
+            filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9))]
+            if exchange_filter == "None":
                 filtered_df
             else:
-                filtered_symbols = company_names[company_names.exchange == exchange_filter.value].to_list()
+                filtered_symbols = company_names[company_names.exchange == exchange_filter].to_list()
                 filtered_df = filtered_df[filtered_df.symbol.isin(filtered_symbols)]
                 filtered_df
 
