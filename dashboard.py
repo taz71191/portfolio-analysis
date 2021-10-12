@@ -83,7 +83,7 @@ def get_data_from_cloud(filename):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)
     data = blob.download_as_string()
-    irr_df = pd.read_csv(io.BytesIO(data), index_col=0)
+    irr_df = pd.read_csv(io.BytesIO(data))
     return irr_df
 
 # https://www.datapine.com/blog/financial-graphs-and-charts-examples/
@@ -135,46 +135,44 @@ def run_dashboard():
             irr_df = get_data_from_cloud(filename='AllCompanies_October.csv')
         except Exception as e:
             st.write(e)
-        try:
-            irr_df = irr_df.sort_values("ROC", ascending=False)
-            irr_df['ROC_rank'] = [x for x in range(1, len(irr_df)+1)]
-            irr_df = irr_df.sort_values("EarningsYield", ascending=False)
-            irr_df['EarningsYield_rank'] = [x for x in range(1, len(irr_df)+1)]
-            irr_df['Total_rank'] = irr_df['ROC_rank'] + irr_df['EarningsYield_rank']
-            irr_df = irr_df.sort_values("Total_rank")
-            mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0.0, max_value=100.0)
-            st.sidebar.write("Min Marcat cap $", mcap_filter, "Billion")
-            irr_df = irr_df.merge(company_names[["symbol","exchange"]], on='symbol')
-            exchanges = list(irr_df['exchange'].unique())
-            exchanges.insert(0,"None")
-            exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
-            filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9))]
-            if exchange_filter == "None":
-                if len(filtered_df) > 100:
-                    filtered_df.head(100)
-            else:
-                
-                filtered_df = filtered_df[filtered_df.exchange == exchange_filter]
-                if len(filtered_df) > 100:
-                    filtered_df.head(100)
-
-            selected_company = st.sidebar.selectbox("Pick a company to analyse", company_names[company_names.symbol.isin(filtered_df['symbol'].to_list())].sort_values(by='name')['name'])
-            drop_down = company_names[company_names.name == selected_company].iloc[0]['symbol']
-            st.subheader(irr_df[irr_df.symbol == drop_down].iloc[0]["name"])
-            text_input = st.sidebar.text_input("Enter a ticker to analyse")
-            if text_input:
-                drop_down = text_input
-            company_data = get_single_company_data(drop_down, apikey)
-            company_data = analysis_single_company_data(company_data)
-            insider_trading = get_insider_trading(drop_down, apikey)
-            ratios = get_company_outlook(drop_down, apikey, bucket='ratios')
-            ratios
-            fig = px.line(company_data, x='year', y=['MOP','QA', 'ROE', 'ROC'])
-            st.plotly_chart(fig)
-            st.write('Insider Trades')
-            insider_trading[['transactionDate','typeOfOwner','acquistionOrDisposition','securitiesTransacted','securityName']]
-        except Exception as e:
-            print(e)
+        
+        irr_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        irr_df = irr_df.sort_values("ROC", ascending=False)
+        irr_df['ROC_rank'] = [x for x in range(1, len(irr_df)+1)]
+        irr_df = irr_df.sort_values("EarningsYield", ascending=False)
+        irr_df['EarningsYield_rank'] = [x for x in range(1, len(irr_df)+1)]
+        irr_df['Total_rank'] = irr_df['ROC_rank'] + irr_df['EarningsYield_rank']
+        irr_df = irr_df.sort_values("Total_rank")
+        mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0.0, max_value=100.0)
+        st.sidebar.write("Min Marcap cap $", mcap_filter, "Billion")
+        irr_df = irr_df.merge(company_names[["symbol","exchange"]], on='symbol')
+        exchanges = list(irr_df['exchange'].unique())
+        exchanges.insert(0,"None")
+        exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
+        filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9))]
+        if exchange_filter == "None":
+            filtered_df
+        else:
+            filtered_df = filtered_df[filtered_df.exchange == exchange_filter]
+            filtered_df
+        filtered_company_names = company_names[(company_names.symbol.isin(filtered_df['symbol'].to_list())) & (company_names.name != "")].sort_values(by='name')['name']
+        selected_company = st.sidebar.selectbox("Pick a company to analyse", filtered_company_names)
+        drop_down = company_names[company_names.name == selected_company].iloc[0]['symbol']
+        st.subheader(irr_df[irr_df.symbol == drop_down].iloc[0]["name"])
+        text_input = st.sidebar.text_input("Enter a ticker to analyse")
+        if text_input:
+            drop_down = text_input
+        company_data = get_single_company_data(drop_down, apikey)
+        company_data = analysis_single_company_data(company_data)
+        insider_trading = get_insider_trading(drop_down, apikey)
+        ratios = get_company_outlook(drop_down, apikey, bucket='ratios')
+        ratios
+        fig = px.line(company_data, x='year', y=['MOP','QA', 'ROE', 'ROC'])
+        st.plotly_chart(fig)
+        st.write('Insider Trades')
+        insider_trading[['transactionDate','typeOfOwner','acquistionOrDisposition','securitiesTransacted','securityName']]
+        # except Exception as e:
+        #     print(e)
 
         try:
             ss = get_social_sentiment(drop_down, apikey)
