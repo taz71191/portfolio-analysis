@@ -83,7 +83,7 @@ def get_data_from_cloud(filename):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)
     data = blob.download_as_string()
-    irr_df = pd.read_csv(io.BytesIO(data))
+    irr_df = pd.read_csv(io.BytesIO(data), index_col=0)
     return irr_df
 
 # https://www.datapine.com/blog/financial-graphs-and-charts-examples/
@@ -142,8 +142,8 @@ def run_dashboard():
             irr_df['EarningsYield_rank'] = [x for x in range(1, len(irr_df)+1)]
             irr_df['Total_rank'] = irr_df['ROC_rank'] + irr_df['EarningsYield_rank']
             irr_df = irr_df.sort_values("Total_rank")
-            mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0, max_value=100)
-            st.sidebar.write("irr filter", mcap_filter)
+            mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0.0, max_value=100.0)
+            st.sidebar.write("Min Marcat cap $", mcap_filter, "Billion")
             irr_df = irr_df.merge(company_names[["symbol","exchange"]], on='symbol')
             exchanges = list(irr_df['exchange'].unique())
             exchanges.insert(0,"None")
