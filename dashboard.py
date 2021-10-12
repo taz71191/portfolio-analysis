@@ -144,15 +144,16 @@ def run_dashboard():
             irr_df = irr_df.sort_values("Total_rank")
             mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0, max_value=100)
             st.sidebar.write("irr filter", mcap_filter)
-            exchanges = company_names[company_names.exchange.isin(company_names['exchange'].to_list())].sort_values(by='exchange')['exchange'].to_list()
+            irr_df = irr_df.merge(company_names[["symbol","exchange"]], on='symbol')
+            exchanges = list(irr_df['exchange'].unique())
             exchanges.insert(0,"None")
             exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
             filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9))]
             if exchange_filter == "None":
                 filtered_df
             else:
-                filtered_symbols = company_names[company_names.exchange == exchange_filter].to_list()
-                filtered_df = filtered_df[filtered_df.symbol.isin(filtered_symbols)]
+                
+                filtered_df = filtered_df[filtered_df.exchange == exchange_filter]
                 filtered_df
 
             selected_company = st.sidebar.selectbox("Pick a company to analyse", company_names[company_names.symbol.isin(filtered_df['symbol'].to_list())].sort_values(by='name')['name'])
