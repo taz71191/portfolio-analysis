@@ -356,11 +356,25 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
         QA = (BS.loc[0, "totalCurrentAssets"] - BS.loc[0, "inventory"]) / BS.loc[
             0, "totalCurrentLiabilities"
         ]
+        # Return on Capital - Magic Formula
+        EBIT = IS.loc[0, "revenue"] - IS.loc[0, "costOfRevenue"] - IS.loc[0,"operatingExpenses"]
+        # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
+
+        NetWorkingCapital = BS.loc[0, "totalCurrentAssets"] - BS.loc[0 ,"totalCurrentLiabilities"]
+        NetFixedAssets = BS.loc[0,"propertyPlantEquipmentNet"]
+
+        ROC = EBIT/(NetWorkingCapital + NetFixedAssets)
+
         # Market Cap
         if len(MC) > 0:
             MCap = MC.loc[0, "marketCap"]
+            # Enterprise_Value = Market_value + netInterestBearingdebt
+            NetInterestBearingdebt = BS.loc[0,"totalDebt"] - BS.loc[0,"taxPayables"]
+            EV = MCap + NetInterestBearingdebt
+            EarningsYield = EBIT/EV
         else:
             MCap = np.nan
+            EarningsYield = np.nan
         PE = CFR.loc[0, "priceEarningsRatioTTM"]
 
         return pd.Series(
@@ -369,6 +383,8 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
                 "name": company.loc["name"],
                 "price": company.loc["price"],
                 "income_statement_date": IS["date"].iloc[0],
+                "ROC": ROC,
+                "EarningsYield": EarningsYield,
                 "irr": irr,
                 "npv_mean": npv_mean,
                 "npv_regression": npv_regression,
@@ -409,6 +425,8 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
                     "name": company.loc["name"],
                     "price": company.loc["price"],
                     "income_statement_date": IS["date"].iloc[-1],
+                    "ROC": np.nan,
+                    "EarningsYield": np.nan,
                     "irr": np.nan,
                     "npv_mean": np.nan,
                     "npv_regression": np.nan,

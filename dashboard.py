@@ -50,6 +50,8 @@ def get_single_company_data(symbol, apikey):
 def run_analysis(company_names, exchange, apikey):
     month = pd.Timestamp.now().month_name()
     try:
+        if exchange == 'New York Stock Exchange':
+            exchange='NYSE'
         source_blob_name = f'{exchange}_{month}.csv'
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(source_blob_name)
@@ -73,6 +75,14 @@ def run_analysis(company_names, exchange, apikey):
         failed_companies.to_csv(f"./excels/{exchange}_{month}_failed.csv", index=False,)
         irr_df.to_csv(f"./excels/{exchange}_{month}.csv", index=False,)
     
+    return irr_df
+
+def get_data_from_cloud(filename):
+    source_blob_name = filename
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+    data = blob.download_as_string()
+    irr_df = pd.read_csv(io.BytesIO(data))
     return irr_df
 
 # https://www.datapine.com/blog/financial-graphs-and-charts-examples/
@@ -99,10 +109,18 @@ def analysis_single_company_data(company_data):
      
     combined_data = IS.merge(BS, on='year')
     combined_data["ROE"] = combined_data['netIncome'] / (combined_data["totalAssets"] - combined_data["totalLiabilities"])
+    EBIT = combined_data["revenue"] - combined_data["costOfRevenue"] - combined_data["operatingExpenses"]
+    # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
+
+    NetWorkingCapital = combined_data["totalCurrentAssets"] - combined_data["totalCurrentLiabilities"]
+    NetFixedAssets = combined_data["propertyPlantEquipmentNet"]
+
+    combined_data["ROC"] = EBIT/(NetWorkingCapital + NetFixedAssets)
+
     return combined_data
 
 def run_dashboard():
-    st.title("RoboStock 0.0.01")
+    st.title("RoboStock 0.0.1")
     option = st.sidebar.selectbox("Select dashboard", ['Stock Screener','Stock DeepDive'])
     st.header(option)
 
@@ -112,25 +130,32 @@ def run_dashboard():
         company_names = get_all_company_tickers(apikey)
         # Pick an exchange to run analysus on
         # exchanges = company_names.exchange.unique()
-        exchanges = ["New York Stock Exchange", "NASDAQ", "AMEX", "EURONEXT", "Toronto"]
-
-        selected_exchange = st.selectbox("Pick an exchange to analyze", exchanges)
-        st.write("You selected:", selected_exchange)
-
+        
         try:
-            irr_df = run_analysis(company_names, selected_exchange, apikey)
+            irr_df = get_data_from_cloud(filename='AllCompanies_October.csv')
         except Exception as e:
-            e
-            return 
+            st.write(e)
+            return
         try:
-            irr_df["irr"] = irr_df["irr"].fillna(-100)
-            irr_df["eps_roc"] = irr_df["eps_roc"].fillna(-100)
-            irr_filter = st.sidebar.slider("Filter for Internal Rate of Return", value=[4, int(irr_df.irr.max())])
-            st.sidebar.write("irr filter", irr_filter)
-            eps_roc_filter = st.sidebar.slider("Filter for EPS rate of Change", value=[int(irr_df.eps_roc.min()), int(irr_df.eps_roc.max())])
-            st.sidebar.write("eps_roc_filter", eps_roc_filter)
-            filtered_df = irr_df[(irr_df.irr >= irr_filter[0]) & (irr_df.irr <= irr_filter[1]) & (irr_df.eps_roc >= eps_roc_filter[0]) & (irr_df.eps_roc <= eps_roc_filter[1])]
-            filtered_df
+            irr_df = irr_df.sort_values("ROC", ascending=False)
+            irr_df['ROC_rank'] = [x for x in range(1, len(irr_df)+1)]
+            irr_df = irr_df.sort_values("EarningsYield", ascending=False)
+            irr_df['EarningsYield_rank'] = [x for x in range(1, len(irr_df)+1)]
+            irr_df['Total_rank'] = irr_df['ROC_rank'] + irr_df['EarningsYield_rank']
+            irr_df = irr_df.sort_values("Total_rank")
+            mcap_filter = st.sidebar.number_input("Filter for MarketCap in billion$", min_value=0, max_value=100)
+            st.sidebar.write("irr filter", mcap_filter)
+            exchanges = company_names[company_names.exchanges.isin(company_names['exchange'].to_list())].sort_values(by='exchange')['exchange']
+            exchanges.insert(0,"None")
+            exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
+            filtered_df = irr_df[(irr_df.MCap >= mcap_filter.value*(10**9))]
+            if exchange_filter.value == "None":
+                filtered_df
+            else:
+                filtered_symbols = company_names[company_names.exchange == exchange_filter.value].to_list()
+                filtered_df = filtered_df[filtered_df.symbol.isin(filtered_symbols)]
+                filtered_df
+
             selected_company = st.sidebar.selectbox("Pick a company to analyse", company_names[company_names.symbol.isin(filtered_df['symbol'].to_list())].sort_values(by='name')['name'])
             drop_down = company_names[company_names.name == selected_company].iloc[0]['symbol']
             st.subheader(irr_df[irr_df.symbol == drop_down].iloc[0]["name"])
@@ -142,7 +167,7 @@ def run_dashboard():
             insider_trading = get_insider_trading(drop_down, apikey)
             ratios = get_company_outlook(drop_down, apikey, bucket='ratios')
             ratios
-            fig = px.line(company_data, x='year', y=['MOP','QA','eps', 'ROE'])
+            fig = px.line(company_data, x='year', y=['MOP','QA', 'ROE', 'ROC'])
             st.plotly_chart(fig)
             st.write('Insider Trades')
             insider_trading[['transactionDate','typeOfOwner','acquistionOrDisposition','securitiesTransacted','securityName']]
