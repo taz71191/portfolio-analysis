@@ -147,11 +147,13 @@ def run_dashboard():
         st.sidebar.write("Min Marcap cap $", mcap_filter, "Billion")
         roc_filter = st.sidebar.number_input("Filter for Return on Capital", min_value=0.0, max_value=1.0)
         st.sidebar.write("Min Return On Capital %", roc_filter)
+        pe_filter = st.sidebar.number_input("Filter for P/E", min_value=0.0, max_value=100.0)
+        st.sidebar.write("Min P/E", pe_filter)
         irr_df = irr_df.merge(company_names[["symbol","exchange"]], on='symbol')
         exchanges = list(irr_df['exchange'].unique())
         exchanges.insert(0,"None")
         exchange_filter = st.sidebar.selectbox("Pick an exchange to filter on",exchanges)
-        filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9)) & (irr_df.ROC >= roc_filter)]
+        filtered_df = irr_df[(irr_df.MCap >= mcap_filter*(10**9)) & (irr_df.ROC >= roc_filter)& (irr_df.PE >= pe_filter)]
         if exchange_filter == "None":
             filtered_df
         else:
