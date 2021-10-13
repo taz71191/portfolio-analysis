@@ -24,8 +24,17 @@ from portfolio_analysis.dcf import get_irr
 from google.cloud import storage
 from google.oauth2 import service_account
 import io
+import base64
 
-
+def get_table_download_link(df):
+    """Generates a link allowing the data in a given panda dataframe to be downloaded
+    in:  dataframe
+    out: href string
+    """
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}" download="myfilename.csv">Download csv file</a>'
+    return href
 
 def get_single_company_data(symbol, apikey):
     IS = get_income_statement(symbol, period="annual", apikey=apikey)
@@ -159,6 +168,7 @@ def run_dashboard():
         else:
             filtered_df = filtered_df[filtered_df.exchange == exchange_filter]
             filtered_df
+        st.sidebar.markdown(get_table_download_link(filtered_df), unsafe_allow_html=True)
         filtered_company_names = company_names[(company_names.symbol.isin(filtered_df['symbol'].to_list())) & (company_names.name != "")].sort_values(by='name')['name']
         selected_company = st.sidebar.selectbox("Pick a company to analyse", filtered_company_names)
         drop_down = company_names[company_names.name == selected_company].iloc[0]['symbol']
