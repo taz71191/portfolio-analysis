@@ -5,6 +5,7 @@ import numpy as np
 import numpy_financial as npf
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+
 from portfolio_analysis.data import *
 
 
@@ -248,26 +249,31 @@ def enterprise_value(
 
     return NPV_TV + NPV_FCF
 
+
 def remove_outliers(df, metric):
     median = df[f"{metric}_roc"].median()
     stddev = df[f"{metric}_roc"].std()
-    outliers = (df[f"{metric}_roc"] < (3*stddev - median)) & (df[f"{metric}_roc"] > (3*stddev + median))
+    outliers = (df[f"{metric}_roc"] < (3 * stddev - median)) & (
+        df[f"{metric}_roc"] > (3 * stddev + median)
+    )
     df.loc[outliers, f"{metric}_roc"] = median
     return df
 
+
 def regression_analyze(df, years=10):
-    
-    df.loc[:, "ln_eps"] = np.log(df['eps'])
+
+    df.loc[:, "ln_eps"] = np.log(df["eps"])
     if len(df) > years:
-        df = df.iloc[-years:,:]
-    df.loc[:,'t1'] = [x for x in range(1, len(df)+1)]
+        df = df.iloc[-years:, :]
+    df.loc[:, "t1"] = [x for x in range(1, len(df) + 1)]
     reg = LinearRegression()
     try:
-        reg.fit(np.array(df['t1']).reshape(-1, 1), df['ln_eps'].array)
+        reg.fit(np.array(df["t1"]).reshape(-1, 1), df["ln_eps"].array)
         return {"model": "log-linear", "percent_change": reg.coef_[0]}
     except ValueError as e:
-        reg.fit(np.array(df['t1']).reshape(-1, 1), df['eps'].array)
-        return {"model": "linear", "percent_change": reg.coef_[0]/df['eps'].mean()}
+        reg.fit(np.array(df["t1"]).reshape(-1, 1), df["eps"].array)
+        return {"model": "linear", "percent_change": reg.coef_[0] / df["eps"].mean()}
+
 
 def median_method(df, metric):
     df.loc[:, f"{metric}_roc_rolling"] = df[f"{metric}_roc"].rolling(3).median()
@@ -282,6 +288,7 @@ def median_method(df, metric):
         eps_roc = 0.01
     return eps_roc
 
+
 def predict_future_sales(new_df, eps_base, eps_roc, method):
     future_eps = []
     #     DO this for a optimistic and pessimistic scenario
@@ -294,6 +301,7 @@ def predict_future_sales(new_df, eps_base, eps_roc, method):
     new_df[f"eps_{method}"] = future_eps
     return new_df
 
+
 def project_eps(df, metric):
     df.loc[:, "year"] = df["date"].apply(lambda x: x[:4])
     #     Find rate of change of eps yoy
@@ -302,51 +310,87 @@ def project_eps(df, metric):
     df[f"{metric}_roc"] = df[f"{metric}"].pct_change()
 
     # Geometric mean growth rate n=-3
-    geometric_mean = ((df[f"{metric}_roc"].iloc[-1] / df[f"{metric}_roc"].iloc[-5])**(1/4)) -1
+    geometric_mean = (
+        (df[f"{metric}_roc"].iloc[-1] / df[f"{metric}_roc"].iloc[-5]) ** (1 / 4)
+    ) - 1
 
     # Regression
     # # https://pages.stern.nyu.edu/~adamodar/pdfiles/valn2ed/ch11.pdf
-    regression_results = regression_analyze(df)  
-    
-    eps_roc_flag = 'Positive' 
+    regression_results = regression_analyze(df)
+
+    eps_roc_flag = "Positive"
     for i in range(3):
-        if df[f"{metric}_roc"].iloc[-i-1] < 0:
-            eps_roc_flag = 'Negative'
+        if df[f"{metric}_roc"].iloc[-i - 1] < 0:
+            eps_roc_flag = "Negative"
             break
-    
+
     #     3 year mean of dilued earnings per share as startpoint
     # remove outliers from metric roc
 
     eps_roc = median_method(df, metric)
     eps_base = df[f"{metric}"].iloc[-1]
-    
+
     new_df = pd.DataFrame()
-    new_df.loc[:, "year"] = [i for i in range(int(df.loc[0, 'year']) +1, int(df.loc[0, 'year']) +11)]
-    
-    methods = {f"{regression_results['model']}": regression_results["percent_change"], "mean": eps_roc}
+    new_df.loc[:, "year"] = [
+        i for i in range(int(df.loc[0, "year"]) + 1, int(df.loc[0, "year"]) + 11)
+    ]
+
+    methods = {
+        f"{regression_results['model']}": regression_results["percent_change"],
+        "mean": eps_roc,
+    }
 
     for method in methods.keys():
         new_df = predict_future_sales(new_df, eps_base, methods[f"{method}"], method)
-    
-    return new_df, eps_roc, eps_base, eps_roc_flag, df["eps"].iloc[-3:].to_list(), regression_results
+
+    return (
+        new_df,
+        eps_roc,
+        eps_base,
+        eps_roc_flag,
+        df["eps"].iloc[-3:].to_list(),
+        regression_results,
+    )
 
 
-def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_rate=0.09):
+def get_dividend_ratio(IS, CFS):
+    df = IS.merge(CFS[["date", "dividendsPaid"]], on=["date"])
+    df["dividend_payout_ratio"] = df["dividendsPaid"] / df["netIncome"]
+    return df[["date", "dividend_payout_ratio"]]
+
+
+def get_irr(
+    company, IS, profile, BS, MC, CFR, CFS, cash_flow_metric="eps", discount_rate=0.09
+):
     symbol = company.loc["symbol"]
     try:
-        new_df, eps_roc, eps_base, eps_roc_flag, eps_list, regression_results = project_eps(IS, cash_flow_metric) #eps_roc_flag indicates if any of the years had a negative earning per share rate of change
+        (
+            new_df,
+            eps_roc,
+            eps_base,
+            eps_roc_flag,
+            eps_list,
+            regression_results,
+        ) = project_eps(
+            IS, cash_flow_metric
+        )  # eps_roc_flag indicates if any of the years had a negative earning per share rate of change
         eps = new_df[f"{cash_flow_metric}_{regression_results['model']}"].to_list()
         price = profile.loc[0, "price"]
+        industry_name = profile.loc[0, "industry"]
         eps.insert(0, -price)
         irr = npf.irr(eps)
-        
+
         # npv = cash flow / (1 + i)t - intial_investment
-        new_df.loc[:,'t'] = pd.Series(range(1, len(new_df)+1))
-        new_df.loc[:, 'npv_mean'] = new_df[f"{cash_flow_metric}_mean"] / np.power((1+discount_rate), new_df['t'])
-        new_df.loc[:, f'npv_{regression_results["model"]}'] = new_df[f"{cash_flow_metric}_{regression_results['model']}"] / np.power((1+discount_rate), new_df['t'])
-        npv_mean = new_df['npv_mean'].sum()
+        new_df.loc[:, "t"] = pd.Series(range(1, len(new_df) + 1))
+        new_df.loc[:, "npv_mean"] = new_df[f"{cash_flow_metric}_mean"] / np.power(
+            (1 + discount_rate), new_df["t"]
+        )
+        new_df.loc[:, f'npv_{regression_results["model"]}'] = new_df[
+            f"{cash_flow_metric}_{regression_results['model']}"
+        ] / np.power((1 + discount_rate), new_df["t"])
+        npv_mean = new_df["npv_mean"].sum()
         npv_regression = new_df[f'npv_{regression_results["model"]}'].sum()
-        # ROE is net income divided by average shareholders' equity 
+        # ROE is net income divided by average shareholders' equity
         ROE = CFR.loc[0, "returnOnEquityTTM"]
         # EPS is the net income divided by the weighted average number of common shares issued
         EPS = IS.loc[0, "epsdiluted"]
@@ -357,31 +401,45 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
             0, "totalCurrentLiabilities"
         ]
         # Return on Capital - Magic Formula
-        EBIT = IS.loc[0, "revenue"] - IS.loc[0, "costOfRevenue"] - IS.loc[0,"operatingExpenses"]
+        EBIT = (
+            IS.loc[0, "revenue"]
+            - IS.loc[0, "costOfRevenue"]
+            - IS.loc[0, "operatingExpenses"]
+        )
         # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
 
-        NetWorkingCapital = BS.loc[0, "totalCurrentAssets"] - BS.loc[0 ,"totalCurrentLiabilities"]
-        NetFixedAssets = BS.loc[0,"propertyPlantEquipmentNet"]
+        NetWorkingCapital = (
+            BS.loc[0, "totalCurrentAssets"] - BS.loc[0, "totalCurrentLiabilities"]
+        )
+        NetFixedAssets = BS.loc[0, "propertyPlantEquipmentNet"]
 
-        ROC = EBIT/(NetWorkingCapital + NetFixedAssets)
+        ROC = EBIT / (NetWorkingCapital + NetFixedAssets)
 
         # Market Cap
         if len(MC) > 0:
             MCap = MC.loc[0, "marketCap"]
             # Enterprise_Value = Market_value + netInterestBearingdebt
-            NetInterestBearingdebt = BS.loc[0,"totalDebt"] - BS.loc[0,"taxPayables"]
+            NetInterestBearingdebt = BS.loc[0, "totalDebt"] - BS.loc[0, "taxPayables"]
             EV = MCap + NetInterestBearingdebt
-            EarningsYield = EBIT/EV
+            EarningsYield = EBIT / EV
         else:
             MCap = np.nan
             EarningsYield = np.nan
         PE = CFR.loc[0, "priceEarningsRatioTTM"]
+        # Get Divivdend
+        dividend_paid_trend = round(
+            abs(get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"]), 3
+        ).to_list()
+        dividend_paid = dividend_paid_trend[0]
+        commonstock_repurchased_trend = CFS.loc[0:3, "commonStockRepurchased"].to_list()
+        commonstock_repurchased = commonstock_repurchased_trend[0]
 
         return pd.Series(
             {
                 "symbol": company.loc["symbol"],
                 "name": company.loc["name"],
                 "price": company.loc["price"],
+                "industry": industry_name,
                 "income_statement_date": IS["date"].iloc[0],
                 "ROC": ROC,
                 "EarningsYield": EarningsYield,
@@ -400,13 +458,17 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
                 "eps_roc_flag": eps_roc_flag,
                 "eps_base": eps_base,
                 "eps_list": eps_list,
-                "error_message": ""
+                "dividend_ratio": dividend_paid,
+                "dividend_trend": dividend_paid_trend,
+                "commonstock_repurchased_trend": commonstock_repurchased_trend,
+                "commonstock_repurchased": commonstock_repurchased,
+                "error_message": "",
             }
         )
     except Exception as e:
         print(f"Company with symbol: {symbol} failed with error: {e}")
         # https://finance.zacks.com/difference-between-return-equity-earnings-per-share-1632.html
-        # ROE is net income divided by average shareholders' equity 
+        # ROE is net income divided by average shareholders' equity
         ROE = CFR.loc[0, "returnOnEquityTTM"]
         # EPS is the net income divided by the weighted average number of common shares issued
         EPS = IS.loc[0, "epsdiluted"]
@@ -419,47 +481,60 @@ def get_irr(company, IS, profile, BS, MC, CFR, cash_flow_metric='eps', discount_
         # Market Cap
         MCap = MC.loc[0, "marketCap"]
         PE = CFR.loc[0, "priceEarningsRatioTTM"]
+        industry_name = profile.loc[0, "industry"]
+        dividend_paid_trend = round(
+            abs(get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"]), 3
+        ).to_list()
+        dividend_paid = dividend_paid_trend[0]
+        commonstock_repurchased_trend = CFS.loc[0:3, "commonStockRepurchased"].to_list()
+        commonstock_repurchased = commonstock_repurchased_trend[0]
         return pd.Series(
-                {
-                    "symbol": symbol,
-                    "name": company.loc["name"],
-                    "price": company.loc["price"],
-                    "income_statement_date": IS["date"].iloc[-1],
-                    "ROC": np.nan,
-                    "EarningsYield": np.nan,
-                    "irr": np.nan,
-                    "npv_mean": np.nan,
-                    "npv_regression": np.nan,
-                    "regression_type": np.nan,
-                    "eps_roc": np.nan,
-                    "eps_roc_regression": np.nan,
-                    "eps_diluted": EPS,
-                    "MOP": MOP,
-                    "QA": QA,
-                    "MCap": MCap,
-                    "PE": PE,
-                    "eps_roc_flag": np.nan,
-                    "eps_base": np.nan,
-                    "eps_list": np.nan,
-                    "error_message": e,
-                })
-                    
+            {
+                "symbol": symbol,
+                "name": company.loc["name"],
+                "price": company.loc["price"],
+                "industry": industry_name,
+                "income_statement_date": IS["date"].iloc[-1],
+                "ROC": np.nan,
+                "EarningsYield": np.nan,
+                "irr": np.nan,
+                "npv_mean": np.nan,
+                "npv_regression": np.nan,
+                "regression_type": np.nan,
+                "eps_roc": np.nan,
+                "eps_roc_regression": np.nan,
+                "eps_diluted": EPS,
+                "MOP": MOP,
+                "QA": QA,
+                "MCap": MCap,
+                "PE": PE,
+                "eps_roc_flag": np.nan,
+                "eps_base": np.nan,
+                "eps_list": np.nan,
+                "dividend_ratio": dividend_paid,
+                "dividend_trend": dividend_paid_trend,
+                "commonstock_repurchased_trend": commonstock_repurchased_trend,
+                "commonstock_repurchased": commonstock_repurchased,
+                "error_message": e,
+            }
+        )
+
+
 def run_analysis(company_names, exchange):
     month = pd.Timestamp.now().month_name()
     try:
         irr_df = pd.read_csv(f"excels/{exchange}_{month}.csv")
     except FileNotFoundError:
         irr_df = pd.DataFrame()
-    for index, company in company_names[
-        company_names.exchange == exchange
-        ].iterrows():
+    for index, company in company_names[company_names.exchange == exchange].iterrows():
         symbol = company.loc["symbol"]
         IS = get_income_statement(symbol, period="annual", apikey=apikey)
+        CFS = get_cash_flow_statement(symbol, apikey=apikey)
         profile = get_company_profile(symbol, apikey=apikey)
         BS = get_balance_statement(symbol, apikey=apikey)
         MC = get_market_cap(symbol=symbol, apikey=apikey)
         CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
-        irr = get_irr(company, IS, profile, BS, MC, CFR)
+        irr = get_irr(company, IS, profile, BS, MC, CFR, CFS)
         irr_df = irr_df.append(irr, ignore_index=True)
 
     irr_df.to_csv(f"excels/{exchange}_{month}.csv")

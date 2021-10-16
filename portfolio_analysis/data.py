@@ -195,6 +195,15 @@ def get_insider_trading(symbol, apikey=""):
     return insider_trades
 
 
+def get_cash_flow_statement(symbol, apikey=""):
+    """
+    Fetch insiderstrades
+    """
+    url = f"https://financialmodelingprep.com/api/v3/cash-flow-statement/{symbol}?apikey={apikey}"
+    cashflow = pd.json_normalize(requests.get(url).json())
+    return cashflow
+
+
 def get_financial_ratios(symbol, apikey=""):
     """
     financial ratios
@@ -214,25 +223,30 @@ def get_market_cap(symbol, apikey=""):
     financial_ratio = pd.json_normalize(requests.get(url).json())
     return financial_ratio
 
-def get_company_outlook(symbol, apikey ="", bucket='ratios'):
+
+def get_company_outlook(symbol, apikey="", bucket="ratios"):
     url = f"https://financialmodelingprep.com/api/v4/company-outlook?symbol={symbol}&apikey={apikey}"
     company_outlook = requests.get(url).json()
     return pd.json_normalize(company_outlook[bucket])
+
 
 def get_stock_news(symbol, apikey=""):
     url = f"https://financialmodelingprep.comapi/v3/stock_news?tickers={symbol}&limit=50&apikey={apikey}"
     stock_news = pd.json_normalize(requests.get(url).json())
     return stock_news
 
-def get_social_sentiment(symbol, apikey =""):
+
+def get_social_sentiment(symbol, apikey=""):
     url = f"https://financialmodelingprep.com/api/v4/social-sentiment?symbol={symbol}&apikey={apikey}"
     social_sentiment = pd.json_normalize(requests.get(url).json())
     return social_sentiment
 
-def get_stock_peers(symbol, apikey =""):
+
+def get_stock_peers(symbol, apikey=""):
     url = f"https://financialmodelingprep.com/api/v4/stock_peers?symbol={symbol}&apikey={apikey}"
     stock_peers = pd.json_normalize(requests.get(url).json())
     return stock_peers
+
 
 def get_single_company_data(symbol, apikey):
     IS = get_income_statement(symbol, period="annual", apikey=apikey)
@@ -240,13 +254,9 @@ def get_single_company_data(symbol, apikey):
     BS = get_balance_statement(symbol, apikey=apikey)
     MC = get_market_cap(symbol=symbol, apikey=apikey)
     CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
-    return {
-        "IS":IS,
-        "Profile": profile,
-        "BS":BS,
-        "MC": MC,
-        "CFR": CFR
-    }
+    CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
+    return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS}
+
 
 if __name__ == "__main__":
     """quick test, to use run data.py directly"""
