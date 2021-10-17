@@ -319,6 +319,7 @@ def run_dashboard():
                 company_data["BS"],
                 company_data["MC"],
                 company_data["CFR"],
+                company_data["CFS"]
             )
 
         st.write(irr.to_dict())
