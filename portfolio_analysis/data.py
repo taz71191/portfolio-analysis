@@ -247,6 +247,11 @@ def get_stock_peers(symbol, apikey=""):
     stock_peers = pd.json_normalize(requests.get(url).json())
     return stock_peers
 
+def get_tickers_with_financials(apikey=""):
+    url = f"https://financialmodelingprep.com/api/v3/financial-statement-symbol-lists?apikey={apikey}"
+    tickers = requests.get(url).json()
+    return tickers
+
 
 def get_single_company_data(symbol, apikey):
     IS = get_income_statement(symbol, period="annual", apikey=apikey)

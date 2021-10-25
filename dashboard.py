@@ -13,6 +13,7 @@ from portfolio_analysis.api import apikey
 from portfolio_analysis.data import (
     get_all_company_tickers,
     get_balance_statement,
+    get_cash_flow_statement,
     get_company_outlook,
     get_company_profile,
     get_financial_ratios,
@@ -47,7 +48,8 @@ def get_single_company_data(symbol, apikey):
     BS = get_balance_statement(symbol, apikey=apikey)
     MC = get_market_cap(symbol=symbol, apikey=apikey)
     CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
-    return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR}
+    CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
+    return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS}
 
 
 def run_analysis(company_names, exchange, apikey):
@@ -93,7 +95,9 @@ def run_analysis(company_names, exchange, apikey):
 
     return irr_df
 
-
+# https://discuss.streamlit.io/t/secrets-management-unhashable-in-st-cache/15409/3
+# https://docs.streamlit.io/library/advanced-features/caching
+@st.cache(hash_funcs={"_thread.RLock": lambda _: None}, allow_output_mutation=True)
 def get_data_from_cloud(filename):
     bucket_name = "robostock"
     credentials = service_account.Credentials.from_service_account_info(
@@ -111,7 +115,7 @@ def get_data_from_cloud(filename):
 
 # https://www.datapine.com/blog/financial-graphs-and-charts-examples/
 
-
+@st.cache()
 def analysis_single_company_data(company_data):
     IS = company_data["IS"]
     profile = company_data["Profile"]
@@ -167,10 +171,10 @@ def run_dashboard():
         # Pick an exchange to run analysus on
         # exchanges = company_names.exchange.unique()
         try:
-            irr_df = get_data_from_cloud(filename="AllCompanies_October.csv")
+            irr_df_cache = get_data_from_cloud(filename="AllCompanies_October.csv")
         except Exception as e:
             st.write(e)
-
+        irr_df = irr_df_cache.copy()
         irr_df.replace([np.inf, -np.inf], np.nan, inplace=True)
         irr_df = irr_df.sort_values("ROC", ascending=False)
         irr_df["ROC_rank"] = [x for x in range(1, len(irr_df) + 1)]
@@ -248,36 +252,38 @@ def run_dashboard():
         insider_trading = get_insider_trading(drop_down, apikey)
         ratios = get_company_outlook(drop_down, apikey, bucket="ratios")
         ratios
-        fig = px.line(company_data, x="year", y=["MOP", "QA", "ROE", "ROC"])
+        metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROE"])
+        fig = px.line(company_data, x="year", y=metric_dropdown)
         st.plotly_chart(fig)
         st.write("Insider Trades")
-        insider_trading[
-            [
-                "transactionDate",
-                "typeOfOwner",
-                "acquistionOrDisposition",
-                "securitiesTransacted",
-                "securityName",
-            ]
-        ]
-        # except Exception as e:
-        #     print(e)
-
         try:
-            ss = get_social_sentiment(drop_down, apikey)
-            st.write("Social Sentiment")
-            ss["date"] = ss["date"].apply(lambda x: pd.Timestamp(x).date())
-            ss = ss.groupby("date").agg(
-                {
-                    "absoluteIndex": np.mean,
-                    "relativeIndex": np.mean,
-                    "generalPerception": np.mean,
-                    "sentiment": np.mean,
-                }
-            )
-            ss
-        except KeyError:
-            "No social sentiment data"
+            insider_trading[
+                [
+                    "transactionDate",
+                    "typeOfOwner",
+                    "acquistionOrDisposition",
+                    "securitiesTransacted",
+                    "securityName",
+                ]
+            ]
+        except Exception as e:
+            print(e)
+
+        # try:
+        #     ss = get_social_sentiment(drop_down, apikey)
+        #     st.write("Social Sentiment")
+        #     ss["date"] = ss["date"].apply(lambda x: pd.Timestamp(x).date())
+        #     ss = ss.groupby("date").agg(
+        #         {
+        #             "absoluteIndex": np.mean,
+        #             "relativeIndex": np.mean,
+        #             "generalPerception": np.mean,
+        #             "sentiment": np.mean,
+        #         }
+        #     )
+        #     ss
+        # except KeyError:
+        #     "No social sentiment data"
         #   ss.columns
 
         sp = get_stock_peers(drop_down, apikey)
@@ -286,18 +292,13 @@ def run_dashboard():
             company_names[company_names.symbol.isin(sp["peersList"].iloc[0])]["name"],
         )
         st.subheader(compare_to)
-        compare_to_company_data = get_single_company_data(compare_to, apikey)
-        compare_to_company_data = analysis_single_company_data(compare_to_company_data)
-        fig2 = px.line(compare_to_company_data, x="year", y=["MOP", "QA", "eps", "ROE"])
-        st.plotly_chart(fig2)
+        
         try:
-            st.subheader(irr_df[irr_df.symbol == drop_down].iloc[0]["name"])
-            company_data = get_single_company_data(drop_down, apikey)
-            company_data = analysis_single_company_data(company_data)
-            stock_news = get_stock_news(company_data)
-            fig = px.line(company_data, x="year", y=["MOP", "QA", "eps", "ROE"])
-            st.plotly_chart(fig)
-            stock_news
+            compare_to_company_data = get_single_company_data(compare_to, apikey)
+            compare_to_company_data = analysis_single_company_data(compare_to_company_data)
+            metric_dropdown_compare = st.selectbox("Pick a metric", ["MOP", "QA", "eps", "ROE"])
+            fig2 = px.line(compare_to_company_data, x="year", y=metric_dropdown_compare)
+            st.plotly_chart(fig2)
         except Exception as e:
             """
             There are no companies that match your current selection
@@ -306,10 +307,10 @@ def run_dashboard():
     elif option == "Stock DeepDive":
         company_names = get_all_company_tickers(apikey)
         ticker = st.sidebar.text_input("Enter a ticker to analyse", value="AAPL")
-
+        
         st.subheader(ticker.upper())
         company = company_names[company_names.symbol == ticker]
-
+        company
         company_data = get_single_company_data(ticker, apikey)
         for index, comp in company.iterrows():
             irr = get_irr(

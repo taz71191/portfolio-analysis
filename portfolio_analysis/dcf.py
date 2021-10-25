@@ -425,7 +425,7 @@ def get_irr(
         else:
             MCap = np.nan
             EarningsYield = np.nan
-        PE = CFR.loc[0, "priceEarningsRatioTTM"]
+        PE = CFR.loc[0, "peRatioTTM"]
         # Get Divivdend
         dividend_paid_trend = round(
             abs(get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"]), 3
