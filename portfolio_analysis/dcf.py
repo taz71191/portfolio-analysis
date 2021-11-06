@@ -429,7 +429,7 @@ def get_irr(
         PE = CFR.loc[0, "peRatioTTM"]
         # Get Divivdend
         dividend_paid_trend = round(
-            abs(get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"]), 3
+            get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"], 3
         ).to_list()
         dividend_paid = dividend_paid_trend[0]
         commonstock_repurchased_trend = CFS.loc[0:3, "commonStockRepurchased"].to_list()
