@@ -355,7 +355,7 @@ def project_eps(df, metric):
 
 def get_dividend_ratio(IS, CFS):
     df = IS.merge(CFS[["date", "dividendsPaid"]], on=["date"])
-    df["dividend_payout_ratio"] = df["dividendsPaid"] / df["netIncome"]
+    df["dividend_payout_ratio"] = abs(df["dividendsPaid"]) / df["netIncome"]
     return df[["date", "dividend_payout_ratio"]]
 
 
