@@ -325,8 +325,8 @@ def run_dashboard():
 
         st.write(irr.to_dict())
         company_data = analysis_single_company_data(company_data)
-
-        fig = px.line(company_data, x="year", y=["MOP", "QA", "eps", "ROE"])
+        metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROE"])
+        fig = px.line(company_data, x="year", y=metric_dropdown)
         st.plotly_chart(fig)
 
         try:

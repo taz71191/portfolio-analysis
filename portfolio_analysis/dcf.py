@@ -310,9 +310,9 @@ def project_eps(df, metric):
     df[f"{metric}_roc"] = df[f"{metric}"].pct_change()
 
     # Geometric mean growth rate n=-3
-    geometric_mean = (
-        (df[f"{metric}_roc"].iloc[-1] / df[f"{metric}_roc"].iloc[-5]) ** (1 / 4)
-    ) - 1
+    # geometric_mean = (
+    #     (df[f"{metric}_roc"].iloc[-1] / df[f"{metric}_roc"].iloc[-5]) ** (1 / 4)
+    # ) - 1
 
     # Regression
     # # https://pages.stern.nyu.edu/~adamodar/pdfiles/valn2ed/ch11.pdf
@@ -363,6 +363,9 @@ def get_irr(
     company, IS, profile, BS, MC, CFR, CFS, cash_flow_metric="eps", discount_rate=0.09
 ):
     symbol = company.loc["symbol"]
+    currency = BS.loc[0, "reportedCurrency"]
+    price = profile.loc[0, "price"]
+    industry_name = profile.loc[0, "industry"]
     try:
         (
             new_df,
@@ -375,8 +378,6 @@ def get_irr(
             IS, cash_flow_metric
         )  # eps_roc_flag indicates if any of the years had a negative earning per share rate of change
         eps = new_df[f"{cash_flow_metric}_{regression_results['model']}"].to_list()
-        price = profile.loc[0, "price"]
-        industry_name = profile.loc[0, "industry"]
         eps.insert(0, -price)
         irr = npf.irr(eps)
 
@@ -463,6 +464,7 @@ def get_irr(
                 "commonstock_repurchased_trend": commonstock_repurchased_trend,
                 "commonstock_repurchased": commonstock_repurchased,
                 "error_message": "",
+                "reportedCurrency": currency,
             }
         )
     except Exception as e:
@@ -516,9 +518,118 @@ def get_irr(
                 "commonstock_repurchased_trend": commonstock_repurchased_trend,
                 "commonstock_repurchased": commonstock_repurchased,
                 "error_message": e,
+                "reportedCurrency": currency,
             }
         )
 
+def get_irr_new(
+    company, IS, profile, BS, MC, CFR, CFS, cash_flow_metric="eps", discount_rate=0.09
+):
+    symbol = company.loc["symbol"]
+    currency = BS.loc[0, "reportedCurrency"]
+    price = profile.loc[0, "price"]
+    industry_name = profile.loc[0, "industry"]
+
+    (
+        new_df,
+        eps_roc,
+        eps_base,
+        eps_roc_flag,
+        eps_list,
+        regression_results,
+    ) = project_eps(
+        IS, cash_flow_metric
+    )  # eps_roc_flag indicates if any of the years had a negative earning per share rate of change
+    eps = new_df[f"{cash_flow_metric}_{regression_results['model']}"].to_list()
+    eps.insert(0, -price)
+    irr = npf.irr(eps)
+
+    # npv = cash flow / (1 + i)t - intial_investment
+    new_df.loc[:, "t"] = pd.Series(range(1, len(new_df) + 1))
+    new_df.loc[:, "npv_mean"] = new_df[f"{cash_flow_metric}_mean"] / np.power(
+        (1 + discount_rate), new_df["t"]
+    )
+    new_df.loc[:, f'npv_{regression_results["model"]}'] = new_df[
+        f"{cash_flow_metric}_{regression_results['model']}"
+    ] / np.power((1 + discount_rate), new_df["t"])
+    npv_mean = new_df["npv_mean"].sum()
+    npv_regression = new_df[f'npv_{regression_results["model"]}'].sum()
+    # ROE is net income divided by average shareholders' equity
+    ROE = CFR.loc[0, "returnOnEquityTTM"]
+    # EPS is the net income divided by the weighted average number of common shares issued
+    EPS = IS.loc[0, "epsdiluted"]
+    # Margin of Profits: Operating Income / Sales
+    MOP = IS.loc[0, "operatingIncome"] / IS.loc[0, "revenue"]
+    # Quick assets: Current assets - Inventory / Current Liabilities
+    QA = (BS.loc[0, "totalCurrentAssets"] - BS.loc[0, "inventory"]) / BS.loc[
+        0, "totalCurrentLiabilities"
+    ]
+    # Return on Capital - Magic Formula
+    EBIT = (
+        IS.loc[0, "revenue"]
+        - IS.loc[0, "costOfRevenue"]
+        - IS.loc[0, "operatingExpenses"]
+    )
+    # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
+
+    NetWorkingCapital = (
+        BS.loc[0, "totalCurrentAssets"] - BS.loc[0, "totalCurrentLiabilities"]
+    )
+    NetFixedAssets = BS.loc[0, "propertyPlantEquipmentNet"]
+
+    ROC = EBIT / (NetWorkingCapital + NetFixedAssets)
+
+    # Market Cap
+    if len(MC) > 0:
+        MCap = MC.loc[0, "marketCap"]
+        # Enterprise_Value = Market_value + netInterestBearingdebt
+        NetInterestBearingdebt = BS.loc[0, "totalDebt"] - BS.loc[0, "taxPayables"]
+        EV = MCap + NetInterestBearingdebt
+        EarningsYield = EBIT / EV
+    else:
+        MCap = np.nan
+        EarningsYield = np.nan
+    PE = CFR.loc[0, "peRatioTTM"]
+    # Get Divivdend
+    dividend_paid_trend = round(
+        abs(get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"]), 3
+    ).to_list()
+    dividend_paid = dividend_paid_trend[0]
+    commonstock_repurchased_trend = CFS.loc[0:3, "commonStockRepurchased"].to_list()
+    commonstock_repurchased = commonstock_repurchased_trend[0]
+
+    return pd.Series(
+        {
+            "symbol": company.loc["symbol"],
+            "name": company.loc["name"],
+            "price": company.loc["price"],
+            "industry": industry_name,
+            "income_statement_date": IS["date"].iloc[0],
+            "ROC": ROC,
+            "EarningsYield": EarningsYield,
+            "irr": irr,
+            "npv_mean": npv_mean,
+            "npv_regression": npv_regression,
+            "regression_type": regression_results["model"],
+            "eps_roc": eps_roc,
+            "eps_roc_regression": regression_results["percent_change"],
+            "ROE": ROE,
+            "eps_diluted": EPS,
+            "MOP": MOP,
+            "QA": QA,
+            "MCap": MCap,
+            "PE": PE,
+            "eps_roc_flag": eps_roc_flag,
+            "eps_base": eps_base,
+            "eps_list": eps_list,
+            "dividend_ratio": dividend_paid,
+            "dividend_trend": dividend_paid_trend,
+            "commonstock_repurchased_trend": commonstock_repurchased_trend,
+            "commonstock_repurchased": commonstock_repurchased,
+            "error_message": "",
+            "reportedCurrency": currency,
+        }
+    )
 
 def run_analysis(company_names, exchange):
     month = pd.Timestamp.now().month_name()

@@ -177,6 +177,10 @@ Loading complete
 *.jpeg
 
 #facebook and google data folders
+/excels
 /*.csv
 /*.tsv
 /*.xlsx
+
+#streamlit secret
+/.streamlit/secrets.toml

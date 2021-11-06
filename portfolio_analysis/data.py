@@ -195,31 +195,42 @@ def get_insider_trading(symbol, apikey=""):
     return insider_trades
 
 
-def get_cash_flow_statement(symbol, apikey=""):
+def get_cash_flow_statement(symbol, period="annual",apikey=""):
     """
-    Fetch insiderstrades
+    get cash flow statement
     """
-    url = f"https://financialmodelingprep.com/api/v3/cash-flow-statement/{symbol}?apikey={apikey}"
+    if period == "annual":
+        url = f"https://financialmodelingprep.com/api/v3/cash-flow-statement/{symbol}?apikey={apikey}"
+    else:
+        url = f"https://financialmodelingprep.com/api/v3/cash-flow-statement/{symbol}?period=quarter&apikey={apikey}"
     cashflow = pd.json_normalize(requests.get(url).json())
     return cashflow
 
 
-def get_financial_ratios(symbol, apikey=""):
+def get_financial_ratios(symbol, period="annual", apikey=""):
     """
     financial ratios
     """
-    url = (
-        f"https://financialmodelingprep.com/api/v3/ratios-ttm/{symbol}?apikey={apikey}"
-    )
+    if period == "annual":
+        url = (
+            f"https://financialmodelingprep.com/api/v3/ratios-ttm/{symbol}?apikey={apikey}"
+        )
+    else:
+        url = (
+            f"https://financialmodelingprep.com/api/v3/ratios-ttm/{symbol}?period=quarter&apikey={apikey}"
+        )
     financial_ratio = pd.json_normalize(requests.get(url).json())
     return financial_ratio
 
 
-def get_market_cap(symbol, apikey=""):
+def get_market_cap(symbol, period="annual", apikey=""):
     """
-    financial ratios
+    market_cap
     """
-    url = f"https://financialmodelingprep.com/api/v3/market-capitalization/{symbol}?apikey={apikey}"
+    if period == "annual":
+        url = f"https://financialmodelingprep.com/api/v3/market-capitalization/{symbol}?apikey={apikey}"
+    else:
+        url = f"https://financialmodelingprep.com/api/v3/market-capitalization/{symbol}?period=quarter&apikey={apikey}"
     financial_ratio = pd.json_normalize(requests.get(url).json())
     return financial_ratio
 
@@ -253,13 +264,25 @@ def get_tickers_with_financials(apikey=""):
     return tickers
 
 
-def get_single_company_data(symbol, apikey):
-    IS = get_income_statement(symbol, period="annual", apikey=apikey)
-    profile = get_company_profile(symbol, apikey=apikey)
-    BS = get_balance_statement(symbol, apikey=apikey)
-    MC = get_market_cap(symbol=symbol, apikey=apikey)
-    CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
-    CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
+def get_single_company_data(symbol, apikey, period='annual'):
+    if period == 'annual':
+        IS = get_income_statement(symbol, period="annual", apikey=apikey)
+        profile = get_company_profile(symbol, apikey=apikey)
+        BS = get_balance_statement(symbol, apikey=apikey)
+        MC = get_market_cap(symbol=symbol, apikey=apikey)
+        CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
+        CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
+    elif period == 'quarter':
+        IS = get_income_statement(symbol, period="quarter", apikey=apikey)
+        profile = get_company_profile(symbol, period="quarter", apikey=apikey)
+        BS = get_balance_statement(symbol, period="quarter", apikey=apikey)
+        MC = get_market_cap(symbol=symbol, period="quarter", apikey=apikey)
+        CFR = get_financial_ratios(symbol=symbol,period="quarter", apikey=apikey)
+        CFS = get_cash_flow_statement(symbol=symbol,period="quarter", apikey=apikey)
+    else:
+        print("Invalid Period")
+        return
+
     return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS}
 
 
