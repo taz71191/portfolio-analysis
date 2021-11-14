@@ -166,7 +166,16 @@ def run_dashboard():
 
     if option == "Sector Analysis":
         sector_analysis = get_data_from_cloud(filename="sector_analysis.csv")
-        sector_analysis
+        remove_unnamed_columns = [col for col in sector_analysis.columns if col[:7] != "Unnamed"]
+        sector_analysis = sector_analysis[remove_unnamed_columns]
+        all_exchanges = list(sector_analysis.exchange.unique())
+        all_exchanges.sort()
+        all_exchanges.insert(0, "ALL")
+        exchange_dropdown = st.sidebar.selectbox("Pick a sector to filter on",all_exchanges)
+        if exchange_dropdown == "ALL":
+            sector_analysis
+        else:
+            sector_analysis[sector_analysis.exchange == exchange_dropdown]
 
     elif (option == "Stock Screener") or (option == "Magic Formula Companies"):
 
@@ -221,11 +230,23 @@ def run_dashboard():
             if column not in column_order:
                 column_order += [f"{column}"]
         irr_df = irr_df[column_order]
+        all_sectors = list(irr_df.sector.unique())
+        all_sectors.sort()
+        all_sectors.insert(0, "ALL")
+        sector_dropdown = st.sidebar.selectbox("Pick a sector to filter on",all_sectors)
         filtered_df = irr_df[
-            (irr_df.MCap >= mcap_filter * (10 ** 9))
-            & (irr_df.ROC >= roc_filter)
-            & (irr_df.PE >= pe_filter)
-        ]
+                (irr_df.MCap >= mcap_filter * (10 ** 9))
+                & (irr_df.ROC >= roc_filter)
+                & (irr_df.PE >= pe_filter)
+            ]
+        if sector_dropdown != "ALL":
+            filtered_df = irr_df[
+                (irr_df.MCap >= mcap_filter * (10 ** 9))
+                & (irr_df.ROC >= roc_filter)
+                & (irr_df.PE >= pe_filter)
+                & (irr_df.sector == sector_dropdown)
+            ]
+            
 
         if st.button('Remove All Filters'):
             filtered_df = irr_df
