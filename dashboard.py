@@ -212,7 +212,7 @@ def run_dashboard():
             "Filter for P/E", min_value=0.0, max_value=100.0
         )
         st.sidebar.write("Min P/E", pe_filter)
-        irr_df = irr_df.merge(company_names[["symbol", "exchange"]], on="symbol")
+        # irr_df = irr_df.merge(company_names[["symbol", "exchange"]], on="symbol")
         exchanges = list(irr_df["exchange"].unique())
         exchanges.insert(0, "None")
         exchange_filter = st.sidebar.selectbox(
