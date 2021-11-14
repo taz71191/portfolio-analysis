@@ -219,7 +219,7 @@ def run_dashboard():
             "Pick an exchange to filter on", exchanges
         )
         exclude_sectors = [
-            "Banking", "Insurance"
+            "Banking", "Insurance", "Financial Services"
         ]
         cols = st.sidebar.multiselect(
             "Exclude Sectors", irr_df.sector.unique(), default=[sector for sector in exclude_sectors if sector in irr_df.sector.unique()]
