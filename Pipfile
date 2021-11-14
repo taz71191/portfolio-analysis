@@ -19,6 +19,7 @@ gunicorn = "*"
 sklearn = "*"
 google-cloud-datastore = "*"
 google-cloud-storage = "*"
+fredapi = "*"
 
 [dev-packages]
 pytest = "*"

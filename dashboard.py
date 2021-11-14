@@ -158,23 +158,32 @@ def analysis_single_company_data(company_data):
 
 
 def run_dashboard():
-    st.title("RoboStock 0.0.1")
+    st.title("RoboStock 0.0.2")
     option = st.sidebar.selectbox(
-        "Select dashboard", ["Stock Screener", "Stock DeepDive"]
+        "Select dashboard", ["Stock Screener", "Stock DeepDive", "Magic Formula Companies","Sector Analysis"]
     )
     st.header(option)
 
-    if option == "Stock Screener":
+    if option == "Sector Analysis":
+        sector_analysis = get_data_from_cloud(filename="sector_analysis.csv")
+        sector_analysis
+
+    elif (option == "Stock Screener") or (option == "Magic Formula Companies"):
 
         # Get all the tickers
         company_names = get_all_company_tickers(apikey)
         # Pick an exchange to run analysus on
         # exchanges = company_names.exchange.unique()
         try:
-            irr_df_cache = get_data_from_cloud(filename="AllCompanies_October.csv")
+            if option == "Stock Screener":
+                irr_df_cache = get_data_from_cloud(filename="AllCompanies_October_w_sector.csv")
+            elif option == "Magic Formula Companies":
+                irr_df_cache = get_data_from_cloud(filename="mf_company_analysis.csv")
         except Exception as e:
             st.write(e)
         irr_df = irr_df_cache.copy()
+        remove_unnamed_columns = [col for col in irr_df.columns if col[:7] != "Unnamed"]
+        irr_df = irr_df[remove_unnamed_columns]
         irr_df.replace([np.inf, -np.inf], np.nan, inplace=True)
         irr_df = irr_df.sort_values("ROC", ascending=False)
         irr_df["ROC_rank"] = [x for x in range(1, len(irr_df) + 1)]
@@ -200,29 +209,21 @@ def run_dashboard():
         exchange_filter = st.sidebar.selectbox(
             "Pick an exchange to filter on", exchanges
         )
-        exclude_industries = [
-            "Banks—Diversified",
-            "Capital Markets",
-            "Banks—Regional",
-            "Credit Services",
-            "Insurance—Specialty",
-            "Asset Management",
-            "Insurance—Diversified",
-            "Insurance—Reinsurance",
-            "Insurance—Property & Casualty",
-            "Insurance—Life",
-            "Mortgage Finance"
+        exclude_sectors = [
+            "Banking", "Insurance"
         ]
-
         cols = st.sidebar.multiselect(
-            "Exclude Industries", irr_df.industry.unique(), default=exclude_industries
+            "Exclude Sectors", irr_df.sector.unique(), default=[sector for sector in exclude_sectors if sector in irr_df.sector.unique()]
         )
         filtered_df = irr_df[
             (irr_df.MCap >= mcap_filter * (10 ** 9))
             & (irr_df.ROC >= roc_filter)
             & (irr_df.PE >= pe_filter)
         ]
-        if exchange_filter == "None":
+        if st.button('Remove All Filters'):
+            filtered_df = irr_df
+            filtered_df
+        elif exchange_filter == "None":
             filtered_df[~filtered_df.industry.isin(cols)]
         else:
             filtered_df = filtered_df[
@@ -252,8 +253,11 @@ def run_dashboard():
         insider_trading = get_insider_trading(drop_down, apikey)
         ratios = get_company_outlook(drop_down, apikey, bucket="ratios")
         ratios
-        metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROE"])
-        fig = px.line(company_data, x="year", y=metric_dropdown)
+        metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROE", "ALL"])
+        if metric_dropdown == "ALL":
+            fig = px.line(company_data, x="year", y=["MOP", "QA", "eps", "ROE"])
+        else:
+            fig = px.line(company_data, x="year", y=metric_dropdown)
         st.plotly_chart(fig)
         st.write("Insider Trades")
         try:
@@ -326,7 +330,10 @@ def run_dashboard():
         st.write(irr.to_dict())
         company_data = analysis_single_company_data(company_data)
         metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROE"])
-        fig = px.line(company_data, x="year", y=metric_dropdown)
+        if metric_dropdown == "ALL":
+            fig = px.line(company_data, x="year", y=["MOP", "QA", "eps", "ROE"])
+        else:
+            fig = px.line(company_data, x="year", y=metric_dropdown)
         st.plotly_chart(fig)
 
         try:

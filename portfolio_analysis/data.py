@@ -263,6 +263,16 @@ def get_tickers_with_financials(apikey=""):
     tickers = requests.get(url).json()
     return tickers
 
+def industry_sector_performance(apikey=""):
+    url = f"https://financialmodelingprep.com/api/v3/historical-sectors-performance?apikey={apikey}"
+    industry_sector_performance = requests.get(url).json()
+    return pd.json_normalize(industry_sector_performance)
+# https://opendata.gov.je/dataset/average-earnings-index/resource/ae19c45b-91c7-4636-9c4a-10f939e767e5
+
+def historical_daily_price(symbol, apikey=""):
+    url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{symbol}?apikey={apikey}"
+    historical_daily_price = requests.get(url).json()
+    return pd.json_normalize(historical_daily_price["historical"])
 
 def get_single_company_data(symbol, apikey, period='annual'):
     if period == 'annual':
@@ -272,6 +282,7 @@ def get_single_company_data(symbol, apikey, period='annual'):
         MC = get_market_cap(symbol=symbol, apikey=apikey)
         CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
         CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
+        HP = historical_daily_price('AAPL', apikey)
     elif period == 'quarter':
         IS = get_income_statement(symbol, period="quarter", apikey=apikey)
         profile = get_company_profile(symbol, period="quarter", apikey=apikey)
@@ -279,11 +290,35 @@ def get_single_company_data(symbol, apikey, period='annual'):
         MC = get_market_cap(symbol=symbol, period="quarter", apikey=apikey)
         CFR = get_financial_ratios(symbol=symbol,period="quarter", apikey=apikey)
         CFS = get_cash_flow_statement(symbol=symbol,period="quarter", apikey=apikey)
+        HP = historical_daily_price('AAPL', apikey)
     else:
         print("Invalid Period")
         return
 
-    return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS}
+    return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS, "HP": HP}
+
+def aggregate_to_quarter(df, agg=True, statistic="mean"):
+    df["date"] = pd.to_datetime(df.date)
+    df["year"] = df.date.dt.year
+    df["quarter"] = df.date.dt.quarter
+    if agg:
+        df = df.groupby(["year","quarter"]).agg(statistic).reset_index()
+    return df
+
+def save_company_metrics(company_data_dict):
+    IS = company_data_dict["IS"]
+    BS = company_data_dict["BS"]
+    HP = company_data_dict["HP"]
+
+    IS_metric = IS.loc[:, ["date","eps","revenue","costOfRevenue","operatingExpenses","netIncome","interestExpense"]].copy()
+    IS_metric = aggregate_to_quarter(IS_metric)
+    BS_metric = BS.loc[:, ["date","propertyPlantEquipmentNet","totalCurrentAssets","inventory","netReceivables","otherCurrentAssets","propertyPlantEquipmentNet","totalDebt"]]
+    BS_metric = aggregate_to_quarter(BS_metric)
+    HP_metric = HP.loc[:, ["date","volume", "close"]]
+    HP_metric = aggregate_to_quarter(HP_metric, agg=True)
+    combined = IS_metric.merge(BS_metric, on=["year","quarter"], how="outer").merge(HP_metric, on=["year","quarter"], how="outer")
+    return combined
+
 
 
 if __name__ == "__main__":
