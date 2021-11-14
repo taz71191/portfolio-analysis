@@ -252,11 +252,11 @@ def run_dashboard():
             filtered_df = irr_df
             filtered_df
         elif exchange_filter == "None":
-            filtered_df[~filtered_df.industry.isin(cols)]
+            filtered_df[~filtered_df.sector.isin(cols)]
         else:
             filtered_df = filtered_df[
                 (filtered_df.exchange == exchange_filter)
-                & ~(filtered_df.industry.isin(cols))
+                & ~(filtered_df.sector.isin(cols))
             ]
             filtered_df
         st.sidebar.markdown(
