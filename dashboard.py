@@ -215,11 +215,18 @@ def run_dashboard():
         cols = st.sidebar.multiselect(
             "Exclude Sectors", irr_df.sector.unique(), default=[sector for sector in exclude_sectors if sector in irr_df.sector.unique()]
         )
+        # Rearrange columns
+        column_order = ["symbol","name","price","npv_regression","npv_mean","dividend_ratio","ROC","EarningsYield","ROE","MOP","QA","PE","eps_base"]
+        for column in irr_df.columns:
+            if column not in column_order:
+                column_order += [f"{column}"]
+        irr_df = irr_df[column_order]
         filtered_df = irr_df[
             (irr_df.MCap >= mcap_filter * (10 ** 9))
             & (irr_df.ROC >= roc_filter)
             & (irr_df.PE >= pe_filter)
         ]
+
         if st.button('Remove All Filters'):
             filtered_df = irr_df
             filtered_df
