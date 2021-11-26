@@ -97,7 +97,7 @@ def run_analysis(company_names, exchange, apikey):
 
 # https://discuss.streamlit.io/t/secrets-management-unhashable-in-st-cache/15409/3
 # https://docs.streamlit.io/library/advanced-features/caching
-@st.cache(hash_funcs={"_thread.RLock": lambda _: None}, allow_output_mutation=True)
+@st.cache(hash_funcs={"_thread.RLock": lambda _: None, "builtins.weakref": lambda _: None}, allow_output_mutation=True)
 def get_data_from_cloud(filename):
     bucket_name = "robostock"
     credentials = service_account.Credentials.from_service_account_info(
