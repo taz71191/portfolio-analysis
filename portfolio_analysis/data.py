@@ -295,7 +295,7 @@ def get_single_company_data(symbol, apikey, period='annual'):
         print("Invalid Period")
         return
 
-    return {"IS": IS, "Profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS, "HP": HP}
+    return {"IS": IS, "profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS, "HP": HP}
 
 def aggregate_to_quarter(df, agg=True, statistic="mean"):
     df["date"] = pd.to_datetime(df.date)

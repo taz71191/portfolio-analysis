@@ -298,7 +298,7 @@ def predict_future_sales(new_df, eps_base, eps_roc, method):
         else:
             future_eps.append(future_eps[i - 1] * (1 + eps_roc))
 
-    new_df[f"eps_{method}"] = future_eps
+    new_df.loc[:, f"eps_{method}"] = future_eps
     return new_df
 
 
@@ -307,7 +307,7 @@ def project_eps(df, metric):
     #     Find rate of change of eps yoy
     df = df.sort_values(by="year")
     # Arithemitic Mean
-    df[f"{metric}_roc"] = df[f"{metric}"].pct_change()
+    df.loc[:, f"{metric}_roc"] = df[f"{metric}"].pct_change()
 
     # Geometric mean growth rate n=-3
     # geometric_mean = (
@@ -359,10 +359,16 @@ def get_dividend_ratio(IS, CFS):
     return df[["date", "dividend_payout_ratio"]]
 
 
-def get_irr(
-    company, IS, profile, BS, MC, CFR, CFS, cash_flow_metric="eps", discount_rate=0.09
+def get_irr(cd, cash_flow_metric="eps", discount_rate=0.09
 ):
-    symbol = company.loc["symbol"]
+    IS = cd["IS"]
+    BS = cd["BS"]
+    HP = cd["HP"]
+    MC = cd["MC"]
+    CFR = cd["CFR"]
+    CFS = cd["CFS"]
+    profile = cd["profile"]
+    symbol = profile.loc[0, "symbol"]
     currency = BS.loc[0, "reportedCurrency"]
     price = profile.loc[0, "price"]
     industry_name = profile.loc[0, "industry"]
@@ -428,18 +434,29 @@ def get_irr(
             EarningsYield = np.nan
         PE = CFR.loc[0, "peRatioTTM"]
         # Get Divivdend
-        dividend_paid_trend = round(
-            get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"], 3
-        ).to_list()
-        dividend_paid = dividend_paid_trend[0]
-        commonstock_repurchased_trend = CFS.loc[0:3, "commonStockRepurchased"].to_list()
-        commonstock_repurchased = commonstock_repurchased_trend[0]
+        try:
+            dividend_paid_trend = round(
+                get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"], 3
+            ).to_list()
+            dividend_paid = dividend_paid_trend[0]
+            commonstock_repurchased_trend = CFS.loc[0:3, "commonStockRepurchased"].to_list()
+            commonstock_repurchased = commonstock_repurchased_trend[0]
+        except TypeError:
+            dividend_paid_trend[0]
+            dividend_paid = 0
+            commonstock_repurchased_trend = [0]
+            commonstock_repurchased = commonstock_repurchased_trend[0]
 
+        if len(IS) >= 5:
+            trend_years = 5
+        elif len(IS) > 0:
+            trend_years = len(IS)
+        revenue_change = IS.sort_values("date")["revenue"].iloc[-trend_years:].pct_change().sort_index().to_list()
         return pd.Series(
             {
-                "symbol": company.loc["symbol"],
-                "name": company.loc["name"],
-                "price": company.loc["price"],
+                "symbol": symbol,
+                "name": profile.loc[0, "companyName"],
+                "price": profile.loc[0, "price"],
                 "industry": industry_name,
                 "income_statement_date": IS["date"].iloc[0],
                 "ROC": ROC,
@@ -465,6 +482,8 @@ def get_irr(
                 "commonstock_repurchased": commonstock_repurchased,
                 "error_message": "",
                 "reportedCurrency": currency,
+                "revenue_trend": IS.loc[0:trend_years,"revenue"].to_list(),
+                "revenue_change": revenue_change
             }
         )
     except Exception as e:
@@ -493,10 +512,10 @@ def get_irr(
         return pd.Series(
             {
                 "symbol": symbol,
-                "name": company.loc["name"],
-                "price": company.loc["price"],
+                "name": profile.loc[0, "companyName"],
+                "price": profile.loc[0, "price"],
                 "industry": industry_name,
-                "income_statement_date": IS["date"].iloc[-1],
+                "income_statement_date": IS["date"].iloc[0],
                 "ROC": np.nan,
                 "EarningsYield": np.nan,
                 "irr": np.nan,
@@ -519,6 +538,8 @@ def get_irr(
                 "commonstock_repurchased": commonstock_repurchased,
                 "error_message": e,
                 "reportedCurrency": currency,
+                "revenue_trend": np.nan,
+                "revenue_change": np.nan
             }
         )
 
@@ -639,14 +660,118 @@ def run_analysis(company_names, exchange):
         irr_df = pd.DataFrame()
     for index, company in company_names[company_names.exchange == exchange].iterrows():
         symbol = company.loc["symbol"]
-        IS = get_income_statement(symbol, period="annual", apikey=apikey)
-        CFS = get_cash_flow_statement(symbol, apikey=apikey)
-        profile = get_company_profile(symbol, apikey=apikey)
-        BS = get_balance_statement(symbol, apikey=apikey)
-        MC = get_market_cap(symbol=symbol, apikey=apikey)
-        CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
-        irr = get_irr(company, IS, profile, BS, MC, CFR, CFS)
+        cd = get_single_company_data(symbol)
+        irr = get_irr(cd)
         irr_df = irr_df.append(irr, ignore_index=True)
 
     irr_df.to_csv(f"excels/{exchange}_{month}.csv")
     return irr_df
+
+def get_npv(IS, price, cash_flow_metric, discount_rate):
+    (
+        new_df,
+        eps_roc,
+        eps_base,
+        eps_roc_flag,
+        eps_list,
+        regression_results,
+    ) = project_eps(
+        IS, cash_flow_metric
+    )  # eps_roc_flag indicates if any of the years had a negative earning per share rate of change
+    eps = new_df[f"{cash_flow_metric}_{regression_results['model']}"].to_list()
+    eps.insert(0, -price)
+    irr = npf.irr(eps)
+
+    # npv = cash flow / (1 + i)t - intial_investment
+    new_df.loc[:, "t"] = pd.Series(range(1, len(new_df) + 1))
+    new_df.loc[:, "npv_mean"] = new_df[f"{cash_flow_metric}_mean"] / np.power(
+        (1 + discount_rate), new_df["t"]
+    )
+    new_df.loc[:, f'npv_{regression_results["model"]}'] = new_df[
+        f"{cash_flow_metric}_{regression_results['model']}"
+    ] / np.power((1 + discount_rate), new_df["t"])
+    npv_mean = new_df["npv_mean"].sum()
+    npv_regression = new_df[f'npv_{regression_results["model"]}'].sum()
+    npv_dict = {"eps_roc":eps_roc, 
+        "eps_base":eps_base, 
+        "eps_roc_flag":eps_roc_flag, 
+        "eps_list": eps_list,
+        "npv_mean": npv_mean,
+        "npv_regression": npv_regression}
+    return npv_dict
+
+def get_roc_earnings(IS, BS, MC):
+    if len(IS) >= 5:
+        trend_years = 5
+    elif len(IS) > 0:
+        trend_years = len(IS)
+    
+    if trend_years > 0:
+        MOP = IS.loc[0:trend_years, "operatingIncome"] / IS.loc[0:trend_years, "revenue"]
+        # Quick assets: Current assets - Inventory / Current Liabilities
+        QA = (BS.loc[0:trend_years, "totalCurrentAssets"] - BS.loc[0:trend_years, "inventory"]) / BS.loc[
+            0:trend_years, "totalCurrentLiabilities"
+        ]
+        # Return on Capital - Magic Formula
+        EBIT = (
+            IS.loc[0:trend_years, "revenue"]
+            - IS.loc[0:trend_years, "costOfRevenue"]
+            - IS.loc[0:trend_years, "operatingExpenses"]
+        )
+        # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
+
+        NetWorkingCapital = (
+            BS.loc[0:trend_years, "totalCurrentAssets"] - BS.loc[0:trend_years, "totalCurrentLiabilities"]
+        )
+        NetFixedAssets = BS.loc[0:trend_years, "propertyPlantEquipmentNet"]
+
+        ROC = EBIT / (NetWorkingCapital + NetFixedAssets)
+    else:
+        MOP = [np.nan]
+        QA = [np.nan]
+        EBIT = [np.nan]
+        ROC = [np.nan]
+
+    # Market Cap
+    if len(MC) > 0:
+        MCap = MC.loc[0, "marketCap"]
+        # Enterprise_Value = Market_value + netInterestBearingdebt
+        NetInterestBearingdebt = BS.loc[0, "totalDebt"] - BS.loc[0, "taxPayables"]
+        EV = MCap + NetInterestBearingdebt
+        EarningsYield = EBIT[0] / EV
+    else:
+        MCap = np.nan
+        EarningsYield = np.nan
+
+    roc_dict = {"MOP":MOP.iloc[0],
+        "MOP_trend": MOP,
+        "QA": QA.iloc[0],
+        "QA_trend": QA,
+        "EBIT": EBIT.iloc[0]}
+
+def analyse_company_data(cd, cash_flow_metric='eps', discount_rate=0.05):
+    IS = cd["IS"].sort_values('date', ascending=False)
+    BS = cd["BS"].sort_values('date', ascending=False)
+    HP = cd["HP"].sort_values('date', ascending=False)
+    MC = cd["MC"]
+    CFR = cd["CFR"]
+    CFS = cd["CFS"].sort_values('date', ascending=False)
+    profile = cd["profile"]
+
+    symbol = profile.loc[0,"symbol"]
+    currency = BS.loc[0, "reportedCurrency"]
+    price = profile.loc[0, "price"]
+    industry_name = profile.loc[0, "industry"]
+
+    npv_dict = get_npv(IS, price, cash_flow_metric, discount_rate)
+
+    ROE = CFR.loc[0, "returnOnEquityTTM"]
+    EPS = IS.loc[0, "epsdiluted"]
+
+
+
+
+
+
+
+

@@ -24,7 +24,7 @@ from portfolio_analysis.data import (
     get_stock_news,
     get_stock_peers,
 )
-from portfolio_analysis.dcf import get_irr
+from portfolio_analysis.dcf import get_irr, get_dividend_ratio
 
 # https://www.youtube.com/watch?v=0ESc1bh3eIg&ab_channel=PartTimeLarry
 
@@ -41,7 +41,7 @@ def get_table_download_link(df):
     href = f'<a href="data:file/csv;base64,{b64}" download="myfilename.csv">Download csv file</a>'
     return href
 
-
+@st.cache(hash_funcs={"_thread.RLock": lambda _: None, "builtins.weakref": lambda _: None}, allow_output_mutation=True)
 def get_single_company_data(symbol, apikey):
     IS = get_income_statement(symbol, period="annual", apikey=apikey)
     profile = get_company_profile(symbol, apikey=apikey)
@@ -115,7 +115,7 @@ def get_data_from_cloud(filename):
 
 # https://www.datapine.com/blog/financial-graphs-and-charts-examples/
 
-@st.cache()
+@st.cache(hash_funcs={"_thread.RLock": lambda _: None, "builtins.weakref": lambda _: None}, allow_output_mutation=True)
 def analysis_single_company_data(company_data):
     IS = company_data["IS"]
     profile = company_data["Profile"]
@@ -140,19 +140,20 @@ def analysis_single_company_data(company_data):
     combined_data["ROE"] = combined_data["netIncome"] / (
         combined_data["totalAssets"] - combined_data["totalLiabilities"]
     )
-    EBIT = (
+    combined_data["EBIT"] = (
         combined_data["revenue"]
         - combined_data["costOfRevenue"]
         - combined_data["operatingExpenses"]
     )
     # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
 
-    NetWorkingCapital = (
+    combined_data["NetWorkingCapital"] = (
         combined_data["totalCurrentAssets"] - combined_data["totalCurrentLiabilities"]
     )
-    NetFixedAssets = combined_data["propertyPlantEquipmentNet"]
+    # NetFixedAssets = combined_data["propertyPlantEquipmentNet"]
 
-    combined_data["ROC"] = EBIT / (NetWorkingCapital + NetFixedAssets)
+    #  ROC = EBIT / (NetWorkingCapital + Net Fixed Assests)
+    combined_data["ROC"] = combined_data["EBIT"] / (combined_data["NetWorkingCapital"] + combined_data["propertyPlantEquipmentNet"])
 
     return combined_data
 
@@ -185,7 +186,7 @@ def run_dashboard():
         # exchanges = company_names.exchange.unique()
         try:
             if option == "Stock Screener":
-                irr_df_cache = get_data_from_cloud(filename="AllCompanies_October_w_sector.csv")
+                irr_df_cache = get_data_from_cloud(filename="AllCompanies_December.csv")
             elif option == "Magic Formula Companies":
                 irr_df_cache = get_data_from_cloud(filename="mf_company_analysis.csv")
         except Exception as e:
@@ -212,6 +213,10 @@ def run_dashboard():
             "Filter for P/E", min_value=0.0, max_value=100.0
         )
         st.sidebar.write("Min P/E", pe_filter)
+        # Replace NA PEs with 404
+        irr_df["PE"] = irr_df["PE"].fillna(404)
+        irr_df["MCap"] = irr_df["MCap"].fillna(404)
+        irr_df["ROC"] = irr_df["ROC"].fillna(404)
         # irr_df = irr_df.merge(company_names[["symbol", "exchange"]], on="symbol")
         exchanges = list(irr_df["exchange"].unique())
         exchanges.insert(0, "None")
@@ -225,11 +230,12 @@ def run_dashboard():
             "Exclude Sectors", irr_df.sector.unique(), default=[sector for sector in exclude_sectors if sector in irr_df.sector.unique()]
         )
         # Rearrange columns
-        column_order = ["symbol","name","price","npv_regression","npv_mean","dividend_ratio","ROC","EarningsYield","ROE","MOP","QA","PE","eps_base"]
+        column_order = ["symbol","name","price","npv_regression","npv_mean","dividend_ratio","ROC","EarningsYield","revenue_trend","revenue_change", "PE","eps_base"]
         for column in irr_df.columns:
             if column not in column_order:
                 column_order += [f"{column}"]
         irr_df = irr_df[column_order]
+        irr_df["sector"] = irr_df["sector"].fillna("Nan")
         all_sectors = list(irr_df.sector.unique())
         all_sectors.sort()
         all_sectors.insert(0, "ALL")
@@ -247,12 +253,21 @@ def run_dashboard():
                 & (irr_df.sector == sector_dropdown)
             ]
             
-
+        dividend_only = st.checkbox('Dividend Stocks Only')
         if st.button('Remove All Filters'):
             filtered_df = irr_df
             filtered_df
-        elif exchange_filter == "None":
+        elif (exchange_filter == "None") & ~(dividend_only):
             filtered_df[~filtered_df.sector.isin(cols)]
+        elif (exchange_filter == "None") & (dividend_only):
+            filtered_df[(~filtered_df.sector.isin(cols)) & (filtered_df.dividend_ratio > 0)]
+        elif dividend_only:
+            filtered_df = filtered_df[
+                (filtered_df.exchange == exchange_filter)
+                & ~(filtered_df.sector.isin(cols)) 
+                & (filtered_df.dividend_ratio > 0)
+            ]
+            filtered_df
         else:
             filtered_df = filtered_df[
                 (filtered_df.exchange == exchange_filter)
@@ -273,17 +288,21 @@ def run_dashboard():
             "symbol"
         ]
         st.subheader(irr_df[irr_df.symbol == drop_down].iloc[0]["name"])
+        irr_df[irr_df.symbol == drop_down]
         text_input = st.sidebar.text_input("Enter a ticker to analyse")
         if text_input:
             drop_down = text_input
         company_data = get_single_company_data(drop_down, apikey)
         company_data = analysis_single_company_data(company_data)
+        company_data.head()
         insider_trading = get_insider_trading(drop_down, apikey)
         ratios = get_company_outlook(drop_down, apikey, bucket="ratios")
         ratios
-        metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROE", "ALL"])
+        metric_dropdown = st.selectbox("Pick a metric",["MOP", "QA", "eps", "ROC", "revenue", "EBIT","NetWorkingCapital", "totalDebt","netIncome","propertyPlantEquipmentNet", "money","ALL"])
         if metric_dropdown == "ALL":
-            fig = px.line(company_data, x="year", y=["MOP", "QA", "eps", "ROE"])
+            fig = px.line(company_data, x="year", y=["MOP", "QA", "eps", "ROC"])
+        elif metric_dropdown == "money":
+            fig = px.line(company_data, x="year", y=["revenue", "totalDebt", "netIncome","EBIT","NetWorkingCapital","propertyPlantEquipmentNet"])
         else:
             fig = px.line(company_data, x="year", y=metric_dropdown)
         st.plotly_chart(fig)
