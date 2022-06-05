@@ -184,3 +184,8 @@ Loading complete
 
 #streamlit secret
 /.streamlit/secrets.toml
+
+#csv
+*.csv
+*.ipynb_checkpoints
+mojek_pipeline/
