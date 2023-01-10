@@ -66,7 +66,7 @@ def get_income_statement(ticker, period="annual", apikey=""):
 
 def get_company_profile(ticker, period="annual", apikey=""):
     """
-    Fetch income statement.
+    Fetch company profile.
     args:
         ticker: company ticker.
         period: annual default, can fetch quarterly if specified.
@@ -274,15 +274,32 @@ def historical_daily_price(symbol, apikey=""):
     historical_daily_price = requests.get(url).json()
     return pd.json_normalize(historical_daily_price["historical"])
 
-def get_single_company_data(symbol, apikey, period='annual'):
+def full_financial_statement(symbol, apikey=""):
+    url = f"https://financialmodelingprep.com/api/v3/financial-statement-full-as-reported/{symbol}?apikey={apikey}"
+    print(url)
+    historical_daily_price = requests.get(url).json()
+    return pd.json_normalize(historical_daily_price["historical"])
+
+def historical_prices(symbol, days=5, apikey=""):
+    url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{symbol}?timeseries={days}&apikey={apikey}"
+    print(url)
+    historical_prices = requests.get(url).json()
+    return pd.json_normalize(historical_prices)
+
+def get_single_company_data(symbol, apikey, period='annual', money_only=False):
     if period == 'annual':
-        IS = get_income_statement(symbol, period="annual", apikey=apikey)
-        profile = get_company_profile(symbol, apikey=apikey)
-        BS = get_balance_statement(symbol, apikey=apikey)
-        MC = get_market_cap(symbol=symbol, apikey=apikey)
-        CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
-        CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
-        HP = historical_daily_price('AAPL', apikey)
+        if money_only:
+            IS = get_income_statement(symbol, period="annual", apikey=apikey)
+            BS = get_balance_statement(symbol, apikey=apikey)
+        else:
+            IS = get_income_statement(symbol, period="annual", apikey=apikey)
+            profile = get_company_profile(symbol, apikey=apikey)
+            BS = get_balance_statement(symbol, apikey=apikey)
+            MC = get_market_cap(symbol=symbol, apikey=apikey)
+            CFR = get_financial_ratios(symbol=symbol, apikey=apikey)
+            CFS = get_cash_flow_statement(symbol=symbol, apikey=apikey)
+            # HP = historical_daily_price(symbol=symbol, apikey=apikey)
+            # FFS = full_financial_statement(symbol=symbol, apikey=apikey)
     elif period == 'quarter':
         IS = get_income_statement(symbol, period="quarter", apikey=apikey)
         profile = get_company_profile(symbol, period="quarter", apikey=apikey)
@@ -290,12 +307,15 @@ def get_single_company_data(symbol, apikey, period='annual'):
         MC = get_market_cap(symbol=symbol, period="quarter", apikey=apikey)
         CFR = get_financial_ratios(symbol=symbol,period="quarter", apikey=apikey)
         CFS = get_cash_flow_statement(symbol=symbol,period="quarter", apikey=apikey)
-        HP = historical_daily_price('AAPL', apikey)
+        # HP = historical_daily_price(symbol=symbol, apikey=apikey)
     else:
         print("Invalid Period")
         return
 
-    return {"IS": IS, "profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS, "HP": HP}
+    if money_only:
+        return {"IS": IS, "BS": BS}
+    else:
+        return {"IS": IS, "profile": profile, "BS": BS, "MC": MC, "CFR": CFR, "CFS": CFS}
 
 def aggregate_to_quarter(df, agg=True, statistic="mean"):
     df["date"] = pd.to_datetime(df.date)
@@ -305,18 +325,20 @@ def aggregate_to_quarter(df, agg=True, statistic="mean"):
         df = df.groupby(["year","quarter"]).agg(statistic).reset_index()
     return df
 
-def save_company_metrics(company_data_dict):
+def save_company_metrics(company_data_dict, ):
     IS = company_data_dict["IS"]
     BS = company_data_dict["BS"]
-    HP = company_data_dict["HP"]
+    # HP = company_data_dict["HP"]
+    CFS = company_data_dict["CFS"]
 
     IS_metric = IS.loc[:, ["date","eps","revenue","costOfRevenue","operatingExpenses","netIncome","interestExpense"]].copy()
     IS_metric = aggregate_to_quarter(IS_metric)
     BS_metric = BS.loc[:, ["date","propertyPlantEquipmentNet","totalCurrentAssets","inventory","netReceivables","otherCurrentAssets","propertyPlantEquipmentNet","totalDebt"]]
     BS_metric = aggregate_to_quarter(BS_metric)
-    HP_metric = HP.loc[:, ["date","volume", "close"]]
-    HP_metric = aggregate_to_quarter(HP_metric, agg=True)
-    combined = IS_metric.merge(BS_metric, on=["year","quarter"], how="outer").merge(HP_metric, on=["year","quarter"], how="outer")
+    # HP_metric = HP.loc[:, ["date","volume", "close"]]
+    # HP_metric = aggregate_to_quarter(HP_metric, agg=True)
+    CFS = HP.loc[:, ["date","volume", "close"]]
+    combined = IS_metric.merge(BS_metric, on=["year","quarter"], how="outer").merge(HP_metric, on=["year","quarter"], how="outer").merge(HP_metric, on=["year","quarter"], how="outer")
     return combined
 
 

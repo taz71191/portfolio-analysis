@@ -116,14 +116,18 @@ def get_data_from_cloud(filename):
 # https://www.datapine.com/blog/financial-graphs-and-charts-examples/
 
 @st.cache(hash_funcs={"_thread.RLock": lambda _: None, "builtins.weakref": lambda _: None}, allow_output_mutation=True)
-def analysis_single_company_data(company_data):
-    IS = company_data["IS"]
-    profile = company_data["Profile"]
-    BS = company_data["BS"]
-    MC = company_data["MC"]
-    CFR = company_data["CFR"]
-    # EPS is the net income divided by the weighted average number of common shares issued
-    EPS = IS.loc[:, ["date", "eps"]]
+def analysis_single_company_data(company_data,  money_only=False):
+    if money_only:
+        IS = company_data["IS"]
+        BS = company_data["BS"]
+    else:
+        IS = company_data["IS"]
+        BS = company_data["BS"]
+        profile = company_data["Profile"]
+        MC = company_data["MC"]
+        CFR = company_data["CFR"]
+        # EPS is the net income divided by the weighted average number of common shares issued
+        EPS = IS.loc[:, ["date", "eps"]]
     # ROE = Net Income / Shareholder Equity
     # Shareholder Equity = Total Assets - Liabilities
 
@@ -208,6 +212,9 @@ def run_dashboard():
         roc_filter = st.sidebar.number_input(
             "Filter for Return on Capital", min_value=0.0, max_value=1.0
         )
+        dividend_filter = st.sidebar.number_input(
+            "Filter for Dividend", min_value=0.0, max_value=100.0
+        )
         st.sidebar.write("Min Return On Capital %", roc_filter)
         pe_filter = st.sidebar.number_input(
             "Filter for P/E", min_value=0.0, max_value=100.0
@@ -252,20 +259,30 @@ def run_dashboard():
                 & (irr_df.PE >= pe_filter)
                 & (irr_df.sector == sector_dropdown)
             ]
+        
+        filtered_df["revenue_flag"] = filtered_df.revenue_change.apply()
             
         dividend_only = st.checkbox('Dividend Stocks Only')
+        declining_revenue = st.checkbox('Declining revenue')
         if st.button('Remove All Filters'):
             filtered_df = irr_df
             filtered_df
         elif (exchange_filter == "None") & ~(dividend_only):
             filtered_df[~filtered_df.sector.isin(cols)]
         elif (exchange_filter == "None") & (dividend_only):
-            filtered_df[(~filtered_df.sector.isin(cols)) & (filtered_df.dividend_ratio > 0)]
+            filtered_df[(~filtered_df.sector.isin(cols)) 
+            & (filtered_df.dividend_ratio > 0) 
+            & (filtered_df.dividend_ratio < dividend_filter)]
+        elif (exchange_filter == "None") & (dividend_only) & (declining_revenue):
+            filtered_df[(~filtered_df.sector.isin(cols)) 
+            & (filtered_df.dividend_ratio > 0) 
+            & (filtered_df.dividend_ratio < dividend_filter)]
         elif dividend_only:
             filtered_df = filtered_df[
                 (filtered_df.exchange == exchange_filter)
                 & ~(filtered_df.sector.isin(cols)) 
-                & (filtered_df.dividend_ratio > 0)
+                & (filtered_df.dividend_ratio > 0) 
+                & (filtered_df.dividend_ratio < dividend_filter)
             ]
             filtered_df
         else:

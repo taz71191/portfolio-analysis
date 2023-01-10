@@ -8,6 +8,50 @@ from sklearn.linear_model import LinearRegression
 
 from portfolio_analysis.data import *
 
+columns = ['cashAndCashEquivalents',
+        'shortTermInvestments',
+        'cashAndShortTermInvestments',
+        'netReceivables',
+        'inventory',
+        'otherCurrentAssets',
+        'totalCurrentAssets',
+        'propertyPlantEquipmentNet',
+        'goodwill',
+        'intangibleAssets',
+        'goodwillAndIntangibleAssets',
+        'longTermInvestments',
+        'taxAssets',
+        'otherNonCurrentAssets',
+        'totalNonCurrentAssets',
+        'otherAssets',
+        'totalAssets',
+        'accountPayables',
+        'shortTermDebt',
+        'taxPayables',
+        'deferredRevenue',
+        'otherCurrentLiabilities',
+        'totalCurrentLiabilities',
+        'longTermDebt',
+        'deferredRevenueNonCurrent',
+        'deferredTaxLiabilitiesNonCurrent',
+        'otherNonCurrentLiabilities',
+        'totalNonCurrentLiabilities',
+        'otherLiabilities',
+        'capitalLeaseObligations',
+        'totalLiabilities',
+        'preferredStock',
+        'commonStock',
+        'retainedEarnings',
+        'accumulatedOtherComprehensiveIncomeLoss',
+        'othertotalStockholdersEquity',
+        'totalStockholdersEquity',
+        'totalLiabilitiesAndStockholdersEquity',
+        'minorityInterest',
+        'totalEquity',
+        'totalLiabilitiesAndTotalEquity',
+        'totalInvestments',
+        'totalDebt',
+        'netDebt']
 
 def DCF(
     ticker,
@@ -358,20 +402,39 @@ def get_dividend_ratio(IS, CFS):
     df["dividend_payout_ratio"] = abs(df["dividendsPaid"]) / df["netIncome"]
     return df[["date", "dividend_payout_ratio"]]
 
+def check_cd(cd):
+    check_dict = {}
+    for key in cd.keys():
+        if len(cd[key]) == 0:
+            check_dict[key] = False
+        else:
+            check_dict[key] = True
 
-def get_irr(cd, cash_flow_metric="eps", discount_rate=0.09
+    return check_dict
+
+def get_irr(cd, symbol, cash_flow_metric="eps", discount_rate=0.09,
 ):
+    check_dict = check_cd(cd)
     IS = cd["IS"]
     BS = cd["BS"]
-    HP = cd["HP"]
+    # HP = cd["HP"]
     MC = cd["MC"]
     CFR = cd["CFR"]
     CFS = cd["CFS"]
     profile = cd["profile"]
-    symbol = profile.loc[0, "symbol"]
-    currency = BS.loc[0, "reportedCurrency"]
-    price = profile.loc[0, "price"]
-    industry_name = profile.loc[0, "industry"]
+    breakpoint()
+    if check_dict['BS']:
+        currency = BS.loc[0, "reportedCurrency"]
+    else:
+        currency = None
+    if check_dict['profile']:
+        sector_name = profile.loc[0, "sector"] 
+        price = profile.loc[0, "price"]
+        industry_name = profile.loc[0, "industry"]
+    else:
+        sector_name = None
+        price = None
+        industry_name = None
     try:
         (
             new_df,
@@ -483,7 +546,8 @@ def get_irr(cd, cash_flow_metric="eps", discount_rate=0.09
                 "error_message": "",
                 "reportedCurrency": currency,
                 "revenue_trend": IS.loc[0:trend_years,"revenue"].to_list(),
-                "revenue_change": revenue_change
+                "revenue_change": revenue_change,
+                "sector": sector_name
             }
         )
     except Exception as e:
@@ -503,6 +567,7 @@ def get_irr(cd, cash_flow_metric="eps", discount_rate=0.09
         MCap = MC.loc[0, "marketCap"]
         PE = CFR.loc[0, "priceEarningsRatioTTM"]
         industry_name = profile.loc[0, "industry"]
+        sector_name = profile.loc[0, "sector"]
         dividend_paid_trend = round(
             abs(get_dividend_ratio(IS, CFS).loc[0:3, "dividend_payout_ratio"]), 3
         ).to_list()
@@ -539,7 +604,8 @@ def get_irr(cd, cash_flow_metric="eps", discount_rate=0.09
                 "error_message": e,
                 "reportedCurrency": currency,
                 "revenue_trend": np.nan,
-                "revenue_change": np.nan
+                "revenue_change": np.nan,
+                "sector": sector_name
             }
         )
 
@@ -752,7 +818,7 @@ def get_roc_earnings(IS, BS, MC):
 def analyse_company_data(cd, cash_flow_metric='eps', discount_rate=0.05):
     IS = cd["IS"].sort_values('date', ascending=False)
     BS = cd["BS"].sort_values('date', ascending=False)
-    HP = cd["HP"].sort_values('date', ascending=False)
+    # HP = cd["HP"].sort_values('date', ascending=False)
     MC = cd["MC"]
     CFR = cd["CFR"]
     CFS = cd["CFS"].sort_values('date', ascending=False)
@@ -768,8 +834,146 @@ def analyse_company_data(cd, cash_flow_metric='eps', discount_rate=0.05):
     ROE = CFR.loc[0, "returnOnEquityTTM"]
     EPS = IS.loc[0, "epsdiluted"]
 
+def analyse_single_company_data(company_data,  money_only=False):
+    if money_only:
+        IS = company_data["IS"]
+        BS = company_data["BS"]
+    else:
+        IS = company_data["IS"]
+        BS = company_data["BS"]
+        profile = company_data["profile"]
+        MC = company_data["MC"]
+        CFR = company_data["CFR"]
+        CFS = company_data["CFS"]
+        # EPS is the net income divided by the weighted average number of common shares issued
+        EPS = IS.loc[:, ["date", "eps"]]
+    # ROE = Net Income / Shareholder Equity
+    # Shareholder Equity = Total Assets - Liabilities
+
+    # Margin of Profits: Operating Income / Sales
+    IS.loc[:, "MOP"] = IS.loc[:, "operatingIncome"] / IS.loc[:, "revenue"]
+    # Quick assets: Current assets - Inventory / Current Liabilities
+    BS.loc[:, "QA"] = (BS.loc[:, "totalCurrentAssets"] - BS.loc[:, "inventory"]) / BS.loc[
+        :, "totalCurrentLiabilities"
+    ]
+    IS.loc[:, "year"] = IS["date"].apply(lambda x: pd.Timestamp(x).year)
+    BS.loc[:, "year"] = BS["date"].apply(lambda x: pd.Timestamp(x).year)
+    CFS.loc[:, "year"] = CFS["date"].apply(lambda x: pd.Timestamp(x).year)
+
+    columns = ['cashAndCashEquivalents',
+        'shortTermInvestments',
+        'cashAndShortTermInvestments',
+        'netReceivables',
+        'inventory',
+        'otherCurrentAssets',
+        'totalCurrentAssets',
+        'propertyPlantEquipmentNet',
+        'goodwill',
+        'intangibleAssets',
+        'goodwillAndIntangibleAssets',
+        'longTermInvestments',
+        'taxAssets',
+        'otherNonCurrentAssets',
+        'totalNonCurrentAssets',
+        'otherAssets',
+        'totalAssets',
+        'accountPayables',
+        'shortTermDebt',
+        'taxPayables',
+        'deferredRevenue',
+        'otherCurrentLiabilities',
+        'totalCurrentLiabilities',
+        'longTermDebt',
+        'deferredRevenueNonCurrent',
+        'deferredTaxLiabilitiesNonCurrent',
+        'otherNonCurrentLiabilities',
+        'totalNonCurrentLiabilities',
+        'otherLiabilities',
+        'capitalLeaseObligations',
+        'totalLiabilities',
+        'preferredStock',
+        'commonStock',
+        'retainedEarnings',
+        'accumulatedOtherComprehensiveIncomeLoss',
+        'othertotalStockholdersEquity',
+        'totalStockholdersEquity',
+        'totalLiabilitiesAndStockholdersEquity',
+        'minorityInterest',
+        'totalEquity',
+        'totalLiabilitiesAndTotalEquity',
+        'totalInvestments',
+        'totalDebt',
+        'netDebt']
+
+    columns += ['year', 'QA']
+
+    combined_data = IS.merge(BS[columns], on="year")
+    combined_data = combined_data.merge(CFS[["year","dividendsPaid"]], on="year")
+    
+    combined_data.loc[:, "dividend_payout_ratio"] = abs(combined_data["dividendsPaid"]) / combined_data["netIncome"]
+    combined_data.loc[:, "ROE"] = combined_data["netIncome"] / (
+        combined_data["totalAssets"] - combined_data["totalLiabilities"]
+    )
+    combined_data.loc[:, "EBIT"] = (
+        combined_data["revenue"]
+        - combined_data["costOfRevenue"]
+        - combined_data["operatingExpenses"]
+    )
+
+    # IS.loc[0, "netIncome"] + IS.loc[0, "incomeTaxExpense"] + IS.loc[0,"interestExpense"]
+
+    combined_data.loc[:, "NetWorkingCapital"] = (
+        combined_data["totalCurrentAssets"] - combined_data["totalCurrentLiabilities"]
+    )
+    # NetFixedAssets = combined_data["propertyPlantEquipmentNet"]
+
+    #  ROC = EBIT / (NetWorkingCapital + Net Fixed Assests)
+    combined_data.loc[:, "ROC"] = combined_data["EBIT"] / (combined_data["NetWorkingCapital"] + combined_data["propertyPlantEquipmentNet"])
+    combined_data = combined_data.sort_values('year')
+    return combined_data
+
+def analyse_reit(cd):
+    IS = cd["IS"].sort_values('date', ascending=False)
+    BS = cd["BS"].sort_values('date', ascending=False)
+    # HP = cd["HP"].sort_values('date', ascending=False)
+    MC = cd["MC"]
+    CFR = cd["CFR"]
+    CFS = cd["CFS"].sort_values('date', ascending=False)
+    profile = cd["profile"]
+    profile = cd["profile"]
+    symbol = profile.loc[0, "symbol"]
+    currency = BS.loc[0, "reportedCurrency"]
+    price = profile.loc[0, "price"]
+    industry_name = profile.loc[0, "industry"]
+    company_name = profile.loc[0, "companyName"]
+
+    IS["ffo"] = IS["netIncome"] + IS["depreciationAndAmortization"]
+    
+    columns = ["calendarYear", "totalDebt"]
+    combined_data = IS.merge(BS[columns], on="calendarYear")
+    combined_data["debt_to_ffo"] = combined_data["totalDebt"] / combined_data["ffo"]
+
+    ffo_yield = combined_data.loc[0, "ffo"] / MC.loc[0,"marketCap"]
+
+    reit_analysis = {}
+    reit_analysis["ffo_yield"] = ffo_yield
+    reit_analysis["symbol"] = symbol
+    reit_analysis["name"] = company_name
+    reit_analysis["industry_name"] = industry_name
+    reit_analysis["price"] = price
+    for year in ['2021', '2020', '2019', '2018', '2017']:
+
+        year_data = combined_data.query(f"calendarYear == '{year}'")
+        if len(year_data) == 0:
+            pass
+        else:
+            reit_analysis[f"{year}_ffo"] = year_data.iloc[0].loc["ffo"]
+            reit_analysis[f"{year}_debt_to_ffo"] = year_data.iloc[0].loc["debt_to_ffo"]
+    
+    return reit_analysis
 
 
+            
 
 
 
